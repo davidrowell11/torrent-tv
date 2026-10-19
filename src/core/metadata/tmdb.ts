@@ -1,0 +1,90 @@
+import type { EpisodeRef, MediaKind, TitleInfo } from '../types';
+import type { Fetcher } from '../sources/types';
+
+const API = 'https://api.themoviedb.org/3';
+const IMG = 'https://image.tmdb.org/t/p';
+
+/**
+ * TMDB client for artwork and details. Users bring their own free key
+ * (https://www.themoviedb.org/settings/api); either the short v3 "API key"
+ * or the long v4 "read access token" works.
+ */
+export class Tmdb {
+  constructor(private key: string, private fetcher: Fetcher = (u, i) => fetch(u, i)) {}
+
+  private async get<T>(path: string, params: Record<string, string> = {}, signal?: AbortSignal): Promise<T> {
+    const url = new URL(API + path);
+    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+    const headers: Record<string, string> = { accept: 'application/json' };
+    if (this.key.length > 40) headers.authorization = `Bearer ${this.key}`;
+    else url.searchParams.set('api_key', this.key);
+    const res = await this.fetcher(url.toString(), { headers, signal });
+    if (res.status === 401) throw new Error('TMDB rejected the API key. Check it in Settings.');
+    if (!res.ok) throw new Error(`TMDB request failed (${res.status})`);
+    return res.json() as Promise<T>;
+  }
+
+  async search(text: string, signal?: AbortSignal): Promise<TitleInfo[]> {
+    const body = await this.get<{ results: TmdbResult[] }>('/search/multi', { query: text, include_adult: 'false' }, signal);
+    return body.results.filter((r) => r.media_type === 'movie' || r.media_type === 'tv').map((r) => toInfo(r, r.media_type as MediaKind));
+  }
+
+  async trending(kind: MediaKind | 'all' = 'all', signal?: AbortSignal): Promise<TitleInfo[]> {
+    const body = await this.get<{ results: TmdbResult[] }>(`/trending/${kind}/week`, {}, signal);
+    return body.results
+      .filter((r) => (r.media_type ?? kind) === 'movie' || (r.media_type ?? kind) === 'tv')
+      .map((r) => toInfo(r, (r.media_type ?? kind) as MediaKind));
+  }
+
+  async details(kind: MediaKind, id: number, signal?: AbortSignal): Promise<TitleInfo> {
+    return toInfo(await this.get<TmdbResult>(`/${kind}/${id}`, {}, signal), kind);
+  }
+
+  /** Every episode of a show that has already aired, oldest first. */
+  async airedEpisodes(id: number, today = new Date(), signal?: AbortSignal): Promise<EpisodeRef[]> {
+    const show = await this.get<{ seasons: { season_number: number }[] }>(`/tv/${id}`, {}, signal);
+    const cutoff = today.toISOString().slice(0, 10);
+    const out: EpisodeRef[] = [];
+    for (const { season_number } of show.seasons) {
+      if (season_number === 0) continue; // specials
+      const season = await this.get<{ episodes: { episode_number: number; name: string; air_date: string | null }[] }>(
+        `/tv/${id}/season/${season_number}`, {}, signal,
+      );
+      for (const ep of season.episodes) {
+        if (ep.air_date && ep.air_date <= cutoff) {
+          out.push({ season: season_number, episode: ep.episode_number, title: ep.name, airDate: ep.air_date });
+        }
+      }
+    }
+    return out;
+  }
+}
+
+interface TmdbResult {
+  id: number;
+  media_type?: string;
+  title?: string;
+  name?: string;
+  overview?: string;
+  release_date?: string;
+  first_air_date?: string;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  vote_average?: number;
+  genres?: { name: string }[];
+}
+
+function toInfo(r: TmdbResult, kind: MediaKind): TitleInfo {
+  const date = r.release_date || r.first_air_date;
+  return {
+    tmdbId: r.id,
+    kind,
+    title: r.title ?? r.name ?? 'Untitled',
+    year: date ? Number(date.slice(0, 4)) : undefined,
+    overview: r.overview ?? '',
+    posterUrl: r.poster_path ? `${IMG}/w500${r.poster_path}` : undefined,
+    backdropUrl: r.backdrop_path ? `${IMG}/w1280${r.backdrop_path}` : undefined,
+    rating: r.vote_average ? Math.round(r.vote_average * 10) / 10 : undefined,
+    genres: r.genres?.map((g) => g.name),
+  };
+}

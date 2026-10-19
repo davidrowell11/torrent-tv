@@ -1,0 +1,22 @@
+appId: app.torrenttv.desktop
+productName: Torrent TV
+directories:
+  output: release
+files:
+  - dist/**
+  - dist-electron/**
+  - package.json
+asar: true
+mac:
+  target: [dmg]
+  category: public.app-category.entertainment
+  hardenedRuntime: true
+win:
+  target: [nsis]
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+# Chromebooks run Linux apps (Crostini), so the .deb / AppImage builds cover them.
+linux:
+  target: [AppImage, deb]
+  category: AudioVideo
