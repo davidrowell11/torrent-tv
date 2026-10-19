@@ -11,7 +11,7 @@ Use it in any browser (and install it to your phone's home screen), or download 
 | Any browser | Open **https://davidrowell11.github.io/vidora/** | | [Browser](docs/INSTALL.md#in-any-browser) |
 | Android phone (e.g. Samsung Galaxy) | Open the web app in Chrome → ⋮ → **Install app** | `Vidora-android.apk` from [Releases](https://github.com/davidrowell11/vidora/releases/latest) | [Android](docs/INSTALL.md#android-phone-or-tablet-eg-samsung-galaxy) |
 | Windows PC | Open the web app in Chrome or Edge → **Install** | `Vidora Setup x.y.z.exe` | [Windows](docs/INSTALL.md#windows) |
-| Mac | Open the web app in Chrome → **Install**, or Safari → File → **Add to Dock** | `Vidora-x.y.z.dmg` | [Mac](docs/INSTALL.md#mac) |
+| Mac | Open the web app in Chrome → **Install**, or Safari → File → **Add to Dock** | `Vidora-x.y.z-arm64.dmg` (Apple M1 or newer) | [Mac](docs/INSTALL.md#mac) |
 | Chromebook | Open the web app in Chrome → **Install** | `.deb` via Linux | [Chromebook](docs/INSTALL.md#chromebook) |
 | Linux | Open the web app | `.deb` or `.AppImage` | [Linux](docs/INSTALL.md#linux) |
 | iPhone / iPad | Safari → Share → **Add to Home Screen** | | [iPhone](docs/INSTALL.md#iphone-or-ipad) |

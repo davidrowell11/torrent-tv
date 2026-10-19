@@ -63,7 +63,7 @@ Downloads made in the browser are kept inside the browser's storage for this sit
 **Without installing anything:** open the web app in Chrome (install icon in the address bar) or Safari (**File → Add to Dock**).
 
 **Full app (virus scan + VPN kill switch):**
-1. Download **Vidora-x.y.z.dmg** from the releases page, open it, and drag **Vidora** into **Applications**.
+1. Download **Vidora-x.y.z-arm64.dmg** from the releases page (for Macs with Apple M1 or newer; on an older Intel Mac, use the web app instead), open it, and drag **Vidora** into **Applications**.
 2. The first time, **right-click** (or Control-click) the app → **Open** → **Open**, because it isn't notarized by Apple yet. Or: System Settings → Privacy & Security → **Open Anyway**.
 3. After that, open Vidora from Launchpad or Applications like any other app.
 4. For virus scanning, install ClamAV once: `brew install clamav && freshclam` (needs Homebrew from https://brew.sh).
