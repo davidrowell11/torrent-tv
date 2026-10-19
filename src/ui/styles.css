@@ -44,7 +44,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.02em; }
 }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 600; padding: 4px 10px 22px; }
 .brand b { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 800; }
-.logo { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: var(--grad); box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45); }
+.logo { display: block; width: 34px; height: 34px; box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35); border-radius: 8px; }
 .nav-item {
   display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px;
   color: var(--muted); font-weight: 500; transition: background 0.15s, color 0.15s; position: relative;

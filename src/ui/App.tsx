@@ -51,7 +51,7 @@ function Shell() {
     <div className="app">
       <nav className="sidebar" aria-label="Main">
         <div className="brand">
-          <span className="logo"><Icon name="play" size={16} /></span>
+          <img className="logo" src="./icon.svg" alt="" />
           <span>Vid<b>ora</b></span>
         </div>
         {NAV.map((n) => (
