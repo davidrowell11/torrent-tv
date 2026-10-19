@@ -67,7 +67,7 @@ export function createTorznabSource(cfg: TorznabConfig, fetcher: Fetcher = (u, i
   return {
     id: cfg.id,
     name: cfg.name,
-    description: 'Torznab feed you added. Not vetted by Torrent TV.',
+    description: 'Torznab feed you added. Not vetted by Vidora.',
     homepage: base.origin,
     // Indexer managers proxy downloads through themselves, so only that host (or magnets) is trusted.
     allowedHosts: [base.hostname],

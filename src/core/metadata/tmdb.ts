@@ -1,4 +1,5 @@
 import type { EpisodeRef, MediaKind, TitleInfo } from '../types';
+import { discoverParams, newReleaseParams, type DiscoverFilters } from './discover';
 import type { Fetcher } from '../sources/types';
 
 const API = 'https://api.themoviedb.org/3';
@@ -29,6 +30,28 @@ export class Tmdb {
     return body.results.filter((r) => r.media_type === 'movie' || r.media_type === 'tv').map((r) => toInfo(r, r.media_type as MediaKind));
   }
 
+  async genres(kind: MediaKind, signal?: AbortSignal): Promise<{ id: number; name: string }[]> {
+    return (await this.get<{ genres: { id: number; name: string }[] }>(`/genre/${kind}/list`, {}, signal)).genres;
+  }
+
+  /** Browse with filters. Returns one page plus whether more pages exist. */
+  async discover(f: DiscoverFilters, page = 1, signal?: AbortSignal): Promise<{ results: TitleInfo[]; more: boolean }> {
+    const body = await this.get<{ results: TmdbResult[]; page: number; total_pages: number }>(`/discover/${f.kind}`, discoverParams(f, page), signal);
+    return { results: body.results.map((r) => toInfo(r, f.kind)), more: body.page < Math.min(body.total_pages, 500) };
+  }
+
+  /** Films released, or shows that premiered, in the last couple of months. */
+  async newReleases(kind: MediaKind, signal?: AbortSignal): Promise<TitleInfo[]> {
+    const body = await this.get<{ results: TmdbResult[] }>(`/discover/${kind}`, newReleaseParams(kind), signal);
+    return body.results.map((r) => toInfo(r, kind));
+  }
+
+  /** Shows with an episode airing in the next week. */
+  async airingThisWeek(signal?: AbortSignal): Promise<TitleInfo[]> {
+    const body = await this.get<{ results: TmdbResult[] }>('/tv/on_the_air', {}, signal);
+    return body.results.map((r) => toInfo(r, 'tv'));
+  }
+
   async trending(kind: MediaKind | 'all' = 'all', signal?: AbortSignal): Promise<TitleInfo[]> {
     const body = await this.get<{ results: TmdbResult[] }>(`/trending/${kind}/week`, {}, signal);
     return body.results
@@ -36,8 +59,31 @@ export class Tmdb {
       .map((r) => toInfo(r, (r.media_type ?? kind) as MediaKind));
   }
 
+  /** Best TMDB match for a title we only know by name (e.g. an Internet Archive film). */
+  async match(kind: MediaKind, title: string, year?: number, signal?: AbortSignal): Promise<TitleInfo | undefined> {
+    const params: Record<string, string> = { query: title.replace(/\(\d{4}\)|\[.*?\]/g, '').trim(), include_adult: 'false' };
+    if (year) params[kind === 'movie' ? 'year' : 'first_air_date_year'] = String(year);
+    const body = await this.get<{ results: TmdbResult[] }>(`/search/${kind}`, params, signal);
+    const hit = body.results[0];
+    return hit ? this.details(kind, hit.id, signal) : undefined;
+  }
+
   async details(kind: MediaKind, id: number, signal?: AbortSignal): Promise<TitleInfo> {
     return toInfo(await this.get<TmdbResult>(`/${kind}/${id}`, {}, signal), kind);
+  }
+
+  /** Episodes airing from today on (the rest of the current or next season). */
+  async upcomingEpisodes(id: number, today = new Date(), signal?: AbortSignal): Promise<EpisodeRef[]> {
+    const show = await this.get<{ next_episode_to_air?: { season_number: number } | null }>(`/tv/${id}`, {}, signal);
+    const next = show.next_episode_to_air;
+    if (!next) return [];
+    const season = await this.get<{ episodes: { episode_number: number; name: string; air_date: string | null }[] }>(
+      `/tv/${id}/season/${next.season_number}`, {}, signal,
+    );
+    const from = today.toISOString().slice(0, 10);
+    return season.episodes
+      .filter((e) => e.air_date && e.air_date >= from)
+      .map((e) => ({ season: next.season_number, episode: e.episode_number, title: e.name, airDate: e.air_date! }));
   }
 
   /** Every episode of a show that has already aired, oldest first. */

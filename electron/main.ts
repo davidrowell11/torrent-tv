@@ -1,28 +1,85 @@
-import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, net, protocol, session, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, rmSync } from 'node:fs';
-import { open as openFile, rename, mkdir } from 'node:fs/promises';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, rmdirSync, statSync, writeFileSync } from 'node:fs';
+import { open as openFile, rename, mkdir, readFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import WebTorrent, { type NodeTorrent } from 'webtorrent';
 import { checkFile as checkSafeFile, checkTorrent, isTrustedTorrentUrl, isVideo } from '../src/core/safety.js';
 import { verifyContent } from '../src/core/sniff.js';
 import { availableScanner, scanFile } from './scan.js';
 import { detectVpn } from './vpn.js';
+import { sanitizeMeta, writeArtworkAndInfo, type Meta } from './metadata.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(here, '..', '..');
-const downloadRoot = join(app.getPath('downloads'), 'Torrent TV');
+const downloadRoot = join(app.getPath('downloads'), 'Vidora');
 const quarantineRoot = join(downloadRoot, '.quarantine');
-const EXTERNAL_OK = ['archive.org', 'themoviedb.org', 'github.com'];
+const EXTERNAL_OK = ['archive.org', 'themoviedb.org', 'github.com', 'trakt.tv'];
 
 type Phase = 'downloading' | 'checking' | 'ready' | 'awaiting-scan' | 'blocked';
 interface Entry {
   label: string; torrent?: NodeTorrent; blockedReason?: string; error?: string; skipped: number; userPaused: boolean;
-  phase: Phase; scanNote?: string; quarantineDir: string;
+  phase: Phase; scanNote?: string; quarantineDir: string; meta?: Meta;
   /** Files that passed every check, now in the library folder. */
   finalFiles: string[];
+  /** Movie folder, or the show folder for an episode (where artwork lives). */
+  titleDir?: string;
   snapshot?: { name: string; size: number; files: string[] };
+}
+
+// ---------- Finished downloads are remembered across restarts ----------
+const indexFile = join(app.getPath('userData'), 'downloads.json');
+interface SavedEntry { id: string; label: string; scanNote?: string; finalFiles: string[]; titleDir?: string; name: string; size: number }
+
+function saveIndex() {
+  const saved: SavedEntry[] = [...entries].filter(([, e]) => e.phase === 'ready').map(([id, e]) => ({
+    id, label: e.label, scanNote: e.scanNote, finalFiles: e.finalFiles, titleDir: e.titleDir,
+    name: e.snapshot?.name ?? e.label, size: e.snapshot?.size ?? 0,
+  }));
+  writeFileSync(indexFile, JSON.stringify(saved));
+}
+
+function loadIndex() {
+  try {
+    const saved = JSON.parse(readFileSync(indexFile, 'utf8')) as SavedEntry[];
+    for (const s of saved) {
+      const files = s.finalFiles.filter((f) => insideLibrary(f) && existsSync(f));
+      if (!files.length) continue; // deleted outside the app
+      entries.set(s.id, {
+        label: s.label, skipped: 0, userPaused: false, phase: 'ready', scanNote: s.scanNote, quarantineDir: join(quarantineRoot, s.id),
+        finalFiles: files, titleDir: s.titleDir && insideLibrary(s.titleDir) ? s.titleDir : undefined,
+        snapshot: { name: s.name, size: s.size, files: files.map((f) => f.split(/[\\/]/).pop()!) },
+      });
+    }
+  } catch { /* first run */ }
+}
+
+const insideLibrary = (p: string) => {
+  const full = resolve(p);
+  return full.startsWith(downloadRoot + sep) && !full.startsWith(quarantineRoot + sep);
+};
+
+/** Delete a finished download's files, then tidy up folders it leaves empty or holding only artwork. */
+function deleteDownload(e: Entry) {
+  for (const f of e.finalFiles) {
+    if (!insideLibrary(f)) continue;
+    rmSync(f, { force: true });
+    rmSync(f.replace(/\.[^.\\/]+$/, '.nfo'), { force: true });
+  }
+  const dirs = new Set(e.finalFiles.map((f) => dirname(f)));
+  if (e.titleDir) dirs.add(e.titleDir);
+  const artwork = new Set(['poster.jpg', 'fanart.jpg', 'movie.nfo', 'tvshow.nfo']);
+  // Deepest first, so Season folders go before the show folder.
+  for (const dir of [...dirs].sort((a, b) => b.length - a.length)) {
+    if (!insideLibrary(dir) || !existsSync(dir)) continue;
+    const left = readdirSync(dir);
+    const onlyArtwork = left.every((n) => artwork.has(n));
+    if (dir === e.titleDir && onlyArtwork) {
+      for (const n of left) rmSync(join(dir, n), { force: true });
+    }
+    try { if (readdirSync(dir).length === 0) rmdirSync(dir); } catch { /* still in use */ }
+  }
 }
 const entries = new Map<string, Entry>();
 let client: WebTorrent | undefined;
@@ -81,12 +138,26 @@ function isLocalFeed(url: string, hosts: string[]) {
   }
 }
 
-function safeFolder(label: string) {
-  const clean = label.replace(/[^\p{L}\p{N} ._()-]/gu, '').replace(/^\.+/, '').slice(0, 120) || 'download';
-  const dir = resolve(downloadRoot, clean);
-  if (!dir.startsWith(downloadRoot + sep)) throw new Error('Invalid folder');
-  mkdirSync(dir, { recursive: true });
-  return dir;
+const cleanName = (s: string) => s.replace(/[^\p{L}\p{N} ._()'&,-]/gu, '').replace(/^[.\s]+|[.\s]+$/g, '').slice(0, 120) || 'download';
+
+/**
+ * Library layout media players understand:
+ *   Films/Title (Year)/            TV/Show/Season 01/
+ * Returns the title folder (where artwork goes) and the folder the video goes in.
+ */
+function libraryFolders(label: string, meta?: Meta) {
+  let titleDir: string, videoDir: string;
+  if (meta?.kind === 'tv' && meta.season !== undefined) {
+    titleDir = resolve(downloadRoot, 'TV', cleanName(meta.title));
+    videoDir = resolve(titleDir, `Season ${String(meta.season).padStart(2, '0')}`);
+  } else if (meta) {
+    titleDir = videoDir = resolve(downloadRoot, 'Films', cleanName(meta.year ? `${meta.title} (${meta.year})` : meta.title));
+  } else {
+    titleDir = videoDir = resolve(downloadRoot, cleanName(label));
+  }
+  if (!titleDir.startsWith(downloadRoot + sep) || !videoDir.startsWith(downloadRoot + sep)) throw new Error('Invalid folder');
+  mkdirSync(videoDir, { recursive: true });
+  return { titleDir, videoDir };
 }
 
 function info(id: string, e: Entry) {
@@ -145,23 +216,32 @@ async function releaseFromQuarantine(e: Entry) {
       e.scanNote = `Checked: real video, ${result.scanner} found no threats`;
     }
   }
-  const dest = safeFolder(e.label);
+  const { titleDir, videoDir: dest } = libraryFolders(e.label, e.meta);
+  e.titleDir = titleDir;
   e.finalFiles = [];
   for (const rel of files) {
-    const target = resolve(dest, rel.split(/[\\/]/).pop()!);
+    const original = rel.split(/[\\/]/).pop()!;
+    // Episodes are renamed "Show S01E02.ext" so players match them; films keep their name.
+    const ext = original.slice(original.lastIndexOf('.'));
+    const name = e.meta?.kind === 'tv' && isVideo(original) ? `${cleanName(e.label)}${ext}` : original;
+    const target = resolve(dest, name);
     if (!target.startsWith(dest + sep)) return block(e, 'Unsafe file path');
     await mkdir(dirname(target), { recursive: true });
     await rename(resolve(e.quarantineDir, rel), target);
     e.finalFiles.push(target);
   }
   rmSync(e.quarantineDir, { recursive: true, force: true });
+  if (e.meta) await writeArtworkAndInfo(e.meta, titleDir, e.finalFiles.find((f) => isVideo(f)));
   e.phase = 'ready';
+  saveIndex();
 }
 
-ipcMain.handle('tt:add', async (_ev, rawUrl: unknown, rawLabel: unknown, rawHosts: unknown) => {
+ipcMain.handle('tt:add', async (_ev, rawUrl: unknown, rawLabel: unknown, rawHosts: unknown, rawMeta: unknown) => {
   const url = str(rawUrl), label = str(rawLabel, 200), hosts = strList(rawHosts);
   const id = randomUUID();
-  const entry: Entry = { label, skipped: 0, userPaused: false, phase: 'downloading', quarantineDir: join(quarantineRoot, id), finalFiles: [] };
+  const entry: Entry = {
+    label, skipped: 0, userPaused: false, phase: 'downloading', quarantineDir: join(quarantineRoot, id), finalFiles: [], meta: sanitizeMeta(rawMeta),
+  };
   entries.set(id, entry);
   if (requireVpn && !detectVpn().connected) {
     entry.error = 'No VPN detected. Connect your VPN, or turn off "Require VPN" in Settings.';
@@ -228,8 +308,35 @@ ipcMain.handle('tt:remove', (_e, id: unknown) => {
   e?.torrent?.destroy({ destroyStore: true });
   if (e && e.phase !== 'ready') rmSync(e.quarantineDir, { recursive: true, force: true });
   entries.delete(key);
+  saveIndex();
 });
-ipcMain.handle('tt:open', (_e, id: unknown) => {
+ipcMain.handle('tt:deleteFiles', (_e, id: unknown) => {
+  const key = str(id, 64);
+  const e = entries.get(key);
+  if (!e) return;
+  e.torrent?.destroy({ destroyStore: true });
+  rmSync(e.quarantineDir, { recursive: true, force: true });
+  if (e.phase === 'ready') deleteDownload(e);
+  entries.delete(key);
+  saveIndex();
+});
+ipcMain.handle('tt:storageUsed', () =>
+  [...entries.values()].filter((e) => e.phase === 'ready').flatMap((e) => e.finalFiles)
+    .reduce((n, f) => { try { return n + statSync(f).size; } catch { return n; } }, 0));
+/** Video URL for the built-in player (served by the private ttmedia: scheme) plus subtitle texts. */
+ipcMain.handle('tt:mediaInfo', async (_e, id: unknown) => {
+  const key = str(id, 64);
+  const e = entries.get(key);
+  if (e?.phase !== 'ready') return null;
+  const vi = e.finalFiles.findIndex((f) => isVideo(f));
+  if (vi < 0) return null;
+  const subtitles = await Promise.all(
+    e.finalFiles.filter((f) => /\.(srt|vtt)$/i.test(f) && insideLibrary(f))
+      .map(async (f) => ({ name: f.split(/[\\/]/).pop()!, text: (await readFile(f, 'utf8')).slice(0, 2_000_000) })),
+  );
+  return { videoUrl: `ttmedia://${key}/${vi}`, subtitles };
+});
+ipcMain.handle('tt:reveal', (_e, id: unknown) => {
   const e = entries.get(str(id, 64));
   if (e?.phase !== 'ready') return;
   const video = e.finalFiles.find((f) => isVideo(f));
@@ -283,13 +390,26 @@ function openExternal(url: string) {
   } catch { /* ignore malformed */ }
 }
 
+// Private scheme that streams finished, verified library files to the built-in player (with seeking).
+protocol.registerSchemesAsPrivileged([{ scheme: 'ttmedia', privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true } }]);
+
 app.on('web-contents-created', (_e, contents) => {
   contents.on('will-attach-webview', (ev) => ev.preventDefault());
 });
 
 app.whenReady().then(() => {
-  session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
+  // Only notifications are allowed (for "new episode ready"); camera, mic, location etc. are always refused.
+  session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'notifications'));
+  session.defaultSession.setPermissionCheckHandler((_wc, perm) => perm === 'notifications');
+  protocol.handle('ttmedia', (req) => {
+    const u = new URL(req.url);
+    const e = entries.get(u.hostname);
+    const file = e?.phase === 'ready' ? e.finalFiles[Number(u.pathname.slice(1))] : undefined;
+    if (!file || !insideLibrary(file) || !isVideo(file)) return new Response('Not found', { status: 404 });
+    return net.fetch(pathToFileURL(file).toString(), { headers: req.headers, bypassCustomProtocolHandlers: true });
+  });
   mkdirSync(downloadRoot, { recursive: true });
+  loadIndex();
   // Anything left in quarantine from a previous run was never verified: delete it.
   rmSync(quarantineRoot, { recursive: true, force: true });
   createWindow();

@@ -5,6 +5,7 @@ import type { TitleInfo } from '../../core/types';
 import { Icon } from '../components/Icon';
 import { Poster, Shelf, SkeletonRow } from '../components/Poster';
 import { useStore } from '../store';
+import { Browse } from './Browse';
 
 const freeToInfo = (f: FreeTitle): TitleInfo => ({
   tmdbId: 0, iaId: f.iaId, kind: 'movie', title: f.title, year: f.year, overview: '', posterUrl: f.thumbUrl,
@@ -19,10 +20,23 @@ export function Discover({ open, goSettings }: { open(info: TitleInfo): void; go
   const [classics, setClassics] = useState<FreeTitle[] | null>(null);
   const [classicTv, setClassicTv] = useState<FreeTitle[] | null>(null);
   const [error, setError] = useState<string>();
+  const [newFilms, setNewFilms] = useState<TitleInfo[] | null>(null);
+  const [newShows, setNewShows] = useState<TitleInfo[] | null>(null);
+  const [airing, setAiring] = useState<TitleInfo[] | null>(null);
+  const [tab, setTab] = useState<'highlights' | 'browse'>(() => {
+    try { return (localStorage.getItem('torrent-tv/discover-tab') as 'browse') ?? 'highlights'; } catch { return 'highlights'; }
+  });
+  const pickTab = (t: 'highlights' | 'browse') => {
+    setTab(t);
+    try { localStorage.setItem('torrent-tv/discover-tab', t); } catch { /* per-device only */ }
+  };
 
   useEffect(() => {
     const ac = new AbortController();
     store.tmdb?.trending('all', ac.signal).then(setTrending).catch((e) => !ac.signal.aborted && setError(String(e.message ?? e)));
+    store.tmdb?.newReleases('movie', ac.signal).then(setNewFilms).catch(() => setNewFilms([]));
+    store.tmdb?.newReleases('tv', ac.signal).then(setNewShows).catch(() => setNewShows([]));
+    store.tmdb?.airingThisWeek(ac.signal).then(setAiring).catch(() => setAiring([]));
     browseFreeClassics('feature_films', 24, undefined, ac.signal).then(setClassics).catch(() => setClassics([]));
     browseFreeClassics('classic_tv', 24, undefined, ac.signal).then(setClassicTv).catch(() => setClassicTv([]));
     return () => ac.abort();
@@ -102,16 +116,41 @@ export function Discover({ open, goSettings }: { open(info: TitleInfo): void; go
       ) : (
         <>
           {store.tmdb && (
-            <Shelf title="Trending" subtitle="What everyone is watching this week">
-              {trending ? trending.map((t) => <Poster key={keyOf(t)} info={t} status={inLib(t)} onOpen={() => open(t)} />) : <SkeletonRow />}
-            </Shelf>
+            <div className="discover-tabs segmented" role="tablist">
+              <button role="tab" aria-selected={tab === 'highlights'} className={tab === 'highlights' ? 'active' : ''} onClick={() => pickTab('highlights')}>
+                <Icon name="sparkle" size={16} />Highlights
+              </button>
+              <button role="tab" aria-selected={tab === 'browse'} className={tab === 'browse' ? 'active' : ''} onClick={() => pickTab('browse')}>
+                <Icon name="filter" size={16} />Browse &amp; filter
+              </button>
+            </div>
           )}
-          <Shelf title="Free classic films" subtitle="Public domain, ready to download now from Internet Archive">
-            {classics ? classics.map((c) => <Poster key={c.iaId} info={freeToInfo(c)} badge="Free" status={inLib(freeToInfo(c))} onOpen={() => open(freeToInfo(c))} />) : <SkeletonRow />}
-          </Shelf>
-          <Shelf title="Classic TV" subtitle="Vintage episodes in the public domain">
-            {classicTv ? classicTv.map((c) => <Poster key={c.iaId} info={freeToInfo(c)} badge="Free" status={inLib(freeToInfo(c))} onOpen={() => open(freeToInfo(c))} />) : <SkeletonRow />}
-          </Shelf>
+          {tab === 'browse' && store.tmdb ? <Browse open={open} inLib={inLib} /> : (
+            <>
+              {store.tmdb && (
+                <>
+                  <Shelf title="Trending" subtitle="What everyone is watching this week">
+                    {trending ? trending.map((t) => <Poster key={keyOf(t)} info={t} status={inLib(t)} onOpen={() => open(t)} />) : <SkeletonRow />}
+                  </Shelf>
+                  <Shelf title="New films" subtitle="Released in the last three months">
+                    {newFilms ? newFilms.map((t) => <Poster key={keyOf(t)} info={t} badge="New" status={inLib(t)} onOpen={() => open(t)} />) : <SkeletonRow />}
+                  </Shelf>
+                  <Shelf title="New TV shows" subtitle="Series that premiered recently">
+                    {newShows ? newShows.map((t) => <Poster key={keyOf(t)} info={t} badge="New" status={inLib(t)} onOpen={() => open(t)} />) : <SkeletonRow />}
+                  </Shelf>
+                  <Shelf title="Airing this week" subtitle="Shows with new episodes in the next few days">
+                    {airing ? airing.map((t) => <Poster key={keyOf(t)} info={t} status={inLib(t)} onOpen={() => open(t)} />) : <SkeletonRow />}
+                  </Shelf>
+                </>
+              )}
+              <Shelf title="Free classic films" subtitle="Public domain, ready to download now from Internet Archive">
+                {classics ? classics.map((c) => <Poster key={c.iaId} info={freeToInfo(c)} badge="Free" status={inLib(freeToInfo(c))} onOpen={() => open(freeToInfo(c))} />) : <SkeletonRow />}
+              </Shelf>
+              <Shelf title="Classic TV" subtitle="Vintage episodes in the public domain">
+                {classicTv ? classicTv.map((c) => <Poster key={c.iaId} info={freeToInfo(c)} badge="Free" status={inLib(freeToInfo(c))} onOpen={() => open(freeToInfo(c))} />) : <SkeletonRow />}
+              </Shelf>
+            </>
+          )}
         </>
       )}
     </div>

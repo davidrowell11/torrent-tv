@@ -9,5 +9,5 @@
     "outDir": "../dist-electron",
     "types": ["node"]
   },
-  "include": ["main.ts", "vpn.ts", "webtorrent-node.d.ts", "../src/core/safety.ts", "../src/core/sniff.ts", "scan.ts"]
+  "include": ["main.ts", "vpn.ts", "webtorrent-node.d.ts", "../src/core/safety.ts", "../src/core/sniff.ts", "scan.ts", "metadata.ts"]
 }

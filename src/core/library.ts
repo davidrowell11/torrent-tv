@@ -1,4 +1,7 @@
+import { defaultQuality, type QualityPrefs } from './quality';
+import type { CleanupPrefs } from './cleanup';
 import type { TorznabConfig } from './sources/torznab';
+import type { TraktAuth } from './sync/trakt';
 import type { EpisodeRef, LibraryEpisode, LibraryItem, LibraryItemStatus, TitleInfo } from './types';
 
 /** Everything the app remembers between sessions. Stored locally only. */
@@ -19,7 +22,15 @@ export interface Settings {
   maxActive: number;
   /** Torznab feeds the user added (Prowlarr, Jackett, etc). */
   customSources: TorznabConfig[];
+  quality: QualityPrefs;
+  cleanup: CleanupPrefs;
+  /** Show a device notification when a new download is ready to watch. */
+  notifications: boolean;
+  /** Optional Trakt sync of watched history. */
+  trakt?: TraktAuth;
 }
+
+const isPhone = () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse) and (max-width: 900px)').matches;
 
 export const defaultSettings: Settings = {
   tmdbKey: '',
@@ -29,6 +40,9 @@ export const defaultSettings: Settings = {
   checkEveryHours: 6,
   maxActive: 2,
   customSources: [],
+  quality: defaultQuality(isPhone()),
+  cleanup: { afterWatchDays: -1, includeFilms: false },
+  notifications: false,
 };
 
 export const keyOf = (info: Pick<TitleInfo, 'kind' | 'tmdbId' | 'iaId'>) =>
@@ -94,6 +108,10 @@ export function reconcile(
   const byId = new Map(downloads.map((d) => [d.id, d]));
   const next = (status: LibraryItemStatus, id?: string): { status: LibraryItemStatus; note?: string } | undefined => {
     const d = id ? byId.get(id) : undefined;
+    // A finished file the engine no longer has was deleted outside the app (or the browser cleared it).
+    if (status === 'done' && id && !d) return { status: 'removed', note: 'No longer on this device' };
+    // Interrupted (app closed mid-download): queue it again rather than leave it stuck.
+    if (status === 'downloading' && id && !d) return { status: 'wanted', note: 'Download was interrupted' };
     if (!d || (status !== 'downloading' && status !== 'searching')) return undefined;
     if (d.phase === 'ready') return { status: 'done', note: d.scanNote };
     if (d.phase === 'blocked') return { status: 'blocked', note: d.blockedReason };

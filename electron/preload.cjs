@@ -3,12 +3,15 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('torrentTV', {
   platform: process.platform,
-  add: (url, label, hosts) => ipcRenderer.invoke('tt:add', url, label, hosts),
+  add: (url, label, hosts, meta) => ipcRenderer.invoke('tt:add', url, label, hosts, meta),
   list: () => ipcRenderer.invoke('tt:list'),
   pause: (id) => ipcRenderer.invoke('tt:pause', id),
   resume: (id) => ipcRenderer.invoke('tt:resume', id),
   remove: (id) => ipcRenderer.invoke('tt:remove', id),
-  open: (id) => ipcRenderer.invoke('tt:open', id),
+  reveal: (id) => ipcRenderer.invoke('tt:reveal', id),
+  deleteFiles: (id) => ipcRenderer.invoke('tt:deleteFiles', id),
+  mediaInfo: (id) => ipcRenderer.invoke('tt:mediaInfo', id),
+  storageUsed: () => ipcRenderer.invoke('tt:storageUsed'),
   vpn: () => ipcRenderer.invoke('tt:vpn'),
   setRequireVpn: (on) => ipcRenderer.invoke('tt:setRequireVpn', on),
   rescan: (id) => ipcRenderer.invoke('tt:rescan', id),
