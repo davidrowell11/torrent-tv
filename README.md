@@ -16,9 +16,11 @@ Use it in any browser (and install it to your phone's home screen), or download 
 | Linux | Open the web app | `.deb` or `.AppImage` | [Linux](docs/INSTALL.md#linux) |
 | iPhone / iPad | Safari → Share → **Add to Home Screen** | | [iPhone](docs/INSTALL.md#iphone-or-ipad) |
 
-Then open **Settings** in Vidora and paste a free TMDB key to turn on search and artwork. **[Full install guide for every device →](docs/INSTALL.md)**
+Then open **Settings** in Vidora and paste a free [TMDB key](https://www.themoviedb.org/settings/api) to turn on search, artwork and age ratings, and a free [OMDb key](https://www.omdbapi.com/apikey.aspx) for IMDb and Rotten Tomatoes scores. **[Full install guide for every device →](docs/INSTALL.md)**
 
-> The web address and the downloads go live once the repository owner has done the one-time [publishing steps](docs/INSTALL.md#for-the-repository-owner-publishing).
+**Updating:** install the new version over the old one. It replaces it, and your library, settings and downloads stay. [How to update on each device →](docs/INSTALL.md#updating-to-a-new-version)
+
+> The downloads are on the [releases page](https://github.com/davidrowell11/vidora/releases/latest). The web address goes live once the repository owner has done the one-time [publishing steps](docs/INSTALL.md#for-the-repository-owner-publishing).
 
 ![Discover](docs/desktop-discover.png)
 
@@ -36,7 +38,8 @@ Then open **Settings** in Vidora and paste a free TMDB key to turn on search and
 - **Browse & filter**: every film or show, filtered by genre, year, rating and language, sorted by popular, newest or top rated.
 - **Follow shows**: new episodes download on their own (checked every few hours). Or grab a whole series from episode one.
 - **You choose what downloads**: nothing is fetched unless you press Download or Get, or follow a show. Unfollow and its episodes stop. Films can be saved to your library without downloading.
-- **Artwork and info**: posters, backdrops, ratings, genres and episode lists from [TMDB](https://www.themoviedb.org/), filled in for every title in your library (free classics are matched to TMDB too).
+- **Artwork and info**: posters, backdrops, descriptions, genres and episode lists from [TMDB](https://www.themoviedb.org/), filled in for every title in your library. Free classics are matched to TMDB too, and fall back to their Internet Archive description.
+- **Ratings**: the age rating (G, PG, PG-13, R, TV-MA…), the IMDb score and the Rotten Tomatoes score on every title.
 - **Media-player ready (desktop)**: downloads are filed as `Films/Title (Year)/` and `TV/Show/Season 01/Show S01E02.mp4`, with `poster.jpg`, `fanart.jpg` and `.nfo` info files that Plex, Jellyfin and Kodi read.
 - **Built-in player**: resumes where you stopped and turns on subtitles in your language automatically. A "Continue watching" row takes you straight back in.
 - **Quality settings**: preferred resolution (480p to 4K) and a maximum file size. Phones default to 720p.
@@ -45,7 +48,9 @@ Then open **Settings** in Vidora and paste a free TMDB key to turn on search and
 - **Storage cleanup**: delete episodes (and optionally films) automatically after you've watched them. Delete any download yourself at any time.
 - **Notifications**: get told when a new episode is ready to watch.
 - **Safe by default**: file allowlist, quarantine, content verification, antivirus scan, VPN kill switch. See [SECURITY.md](SECURITY.md).
-- **Your data stays local**: library and settings live on your device only.
+- **Phone friendly**: a bottom tab bar, and a back arrow and back gesture on every details page.
+- **Updates in place**: each new version installs over the old one on every device, with no second copy.
+- **Your data stays local**: library, settings and keys live on your device only.
 
 ## Sources
 
