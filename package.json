@@ -1,5 +1,5 @@
 {
-  "name": "torrent-tv",
+  "name": "vidora",
   "version": "0.1.0",
   "private": true,
   "description": "Pick shows and movies, fetch them by torrent from vetted legal sources, auto-follow new episodes. Runs in the browser or as a desktop app.",
@@ -40,5 +40,5 @@
     "vitest": "^5.0.5"
   },
   "author": "David Rowell",
-  "repository": "github:davidrowell11/torrent-tv"
+  "repository": "github:davidrowell11/vidora"
 }

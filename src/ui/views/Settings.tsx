@@ -234,7 +234,7 @@ export function Settings() {
         ) : (
           <p className="muted small">On Android, open your browser menu (⋮) and tap <strong>Install app</strong> or <strong>Add to Home screen</strong>. On iPhone, tap Share then <strong>Add to Home Screen</strong>.</p>
         )}
-        <p className="muted small">Prefer a downloadable app? Windows, Mac, Linux and Android versions are on the <a href="https://github.com/davidrowell11/torrent-tv/releases/latest" target="_blank" rel="noreferrer">releases page</a>. <a href="https://github.com/davidrowell11/torrent-tv/blob/main/docs/INSTALL.md" target="_blank" rel="noreferrer">Step-by-step instructions</a>.</p>
+        <p className="muted small">Prefer a downloadable app? Windows, Mac, Linux and Android versions are on the <a href="https://github.com/davidrowell11/vidora/releases/latest" target="_blank" rel="noreferrer">releases page</a>. <a href="https://github.com/davidrowell11/vidora/blob/main/docs/INSTALL.md" target="_blank" rel="noreferrer">Step-by-step instructions</a>.</p>
       </section>
 
       <section className="card">
