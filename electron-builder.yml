@@ -11,8 +11,10 @@ asar: true
 npmRebuild: false
 mac:
   target:
+    # Apple Silicon only: native deps are installed for the build machine (arm64),
+    # so a universal or Intel build would bundle the wrong binaries.
     - target: dmg
-      arch: [universal]
+      arch: [arm64]
   category: public.app-category.entertainment
   icon: assets/icon-only.png
 win:
