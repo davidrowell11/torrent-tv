@@ -21,6 +21,14 @@ After installing, open **Settings** and paste a free TMDB key (https://www.themo
 
 ---
 
+## In any browser
+Works in Chrome, Edge, Samsung Internet, Safari and Firefox, on any device.
+1. Open **https://davidrowell11.github.io/vidora/**.
+2. That's it: Vidora runs in the tab. Bookmark it, or install it (below) so it gets its own icon.
+3. To install it on a computer, use Chrome or Edge and click the **install icon** (a screen with a down arrow) at the right of the address bar, then **Install**. On a Mac in Safari: **File → Add to Dock**.
+
+Downloads made in the browser are kept inside the browser's storage for this site. Clearing the site's data deletes them.
+
 ## Android phone or tablet (e.g. Samsung Galaxy)
 
 ### Option A: install from the browser (quickest)
@@ -43,14 +51,22 @@ After installing, open **Settings** and paste a free TMDB key (https://www.themo
 3. Open Vidora from the home screen. (Apple doesn't allow apps like this outside the App Store, so there's no separate iPhone download.)
 
 ## Windows
+**Without installing anything:** open the web app in Chrome or Edge and click the install icon in the address bar.
+
+**Full app (virus scan + VPN kill switch):**
 1. Download **Vidora Setup x.y.z.exe** from the releases page.
 2. Run it. Windows may show **"Windows protected your PC"** because the app isn't code-signed yet: click **More info** → **Run anyway**.
-3. Microsoft Defender (built in) scans every download automatically.
+3. Click through the installer. Vidora opens when it finishes, and is in the Start menu after that.
+4. Microsoft Defender (built in) scans every download automatically.
 
 ## Mac
+**Without installing anything:** open the web app in Chrome (install icon in the address bar) or Safari (**File → Add to Dock**).
+
+**Full app (virus scan + VPN kill switch):**
 1. Download **Vidora-x.y.z.dmg** from the releases page, open it, and drag **Vidora** into **Applications**.
 2. The first time, **right-click** (or Control-click) the app → **Open** → **Open**, because it isn't notarized by Apple yet. Or: System Settings → Privacy & Security → **Open Anyway**.
-3. For virus scanning, install ClamAV once: `brew install clamav && freshclam` (needs Homebrew from https://brew.sh).
+3. After that, open Vidora from Launchpad or Applications like any other app.
+4. For virus scanning, install ClamAV once: `brew install clamav && freshclam` (needs Homebrew from https://brew.sh).
 
 ## Chromebook
 - **Easiest:** open **https://davidrowell11.github.io/vidora/** in Chrome → click the **install icon** in the address bar (or ⋮ → **Cast, save and share** → **Install page as app**).
@@ -58,7 +74,7 @@ After installing, open **Settings** and paste a free TMDB key (https://www.themo
 - Some school or work Chromebooks block Linux and unknown apps; use the browser version there.
 
 ## Linux
-Download the **.deb** (Ubuntu, Debian, Mint) and open it, or the **.AppImage** (any distro): `chmod +x Torrent*.AppImage && ./Torrent*.AppImage`. Install ClamAV for virus scanning: `sudo apt install clamav`.
+Download the **.deb** (Ubuntu, Debian, Mint) and open it, or the **.AppImage** (any distro): `chmod +x Vidora-*.AppImage && ./Vidora-*.AppImage`. Install ClamAV for virus scanning: `sudo apt install clamav`.
 
 ---
 
@@ -74,5 +90,17 @@ Download the **.deb** (Ubuntu, Debian, Mint) and open it, or the **.AppImage** (
 - Downloaded videos from the desktop app are in your **Downloads/Vidora** folder; delete it to remove them.
 
 ## For the repository owner: publishing
-- **Web app:** one-time, open the repo's **Settings → Pages** and set **Source** to **GitHub Actions**. Every push to `main` then updates the web app.
-- **Downloads:** **Actions → Release apps → Run workflow** (enter a version like `0.2.0`). It builds the Windows, Mac, Linux and Android files and publishes them on the releases page.
+Do these once, in order, on github.com. Nothing here needs a developer.
+1. **Merge the open pull requests** (Pull requests tab → open each → **Merge pull request**). Until then the main branch doesn't contain the app.
+2. **Turn on the web app:** **Settings → Pages**, set **Source** to **GitHub Actions**. Then **Actions → Web app → Run workflow** (or just push to `main`). After a minute or two the app is live at https://davidrowell11.github.io/vidora/, and every later change to `main` updates it.
+3. **Make the downloads:** **Actions → Release apps → Run workflow**, enter a version like `0.2.0`, and press **Run workflow**. When it finishes, the Windows, Mac, Linux and Android files appear on the [releases page](https://github.com/davidrowell11/vidora/releases/latest).
+
+## Running it from source (developers)
+Needs [Node.js 22 or newer](https://nodejs.org/) and Git.
+```bash
+git clone https://github.com/davidrowell11/vidora.git
+cd vidora
+npm install
+npm run dev        # web app at http://localhost:5173
+npm run desktop    # desktop app
+```
