@@ -85,7 +85,7 @@ export function Settings() {
 
       <section className="card">
         <h2><Icon name="key" />Artwork and info</h2>
-        <p className="muted">Torrent TV uses The Movie Database for posters, descriptions and episode schedules. Get a free key at <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer">themoviedb.org</a>, then paste it here.</p>
+        <p className="muted">Vidora uses The Movie Database for posters, descriptions and episode schedules. Get a free key at <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer">themoviedb.org</a>, then paste it here.</p>
         <div className="field-row">
           <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="TMDB API key or read access token" autoComplete="off" spellCheck={false} />
           <button className="btn primary" onClick={saveKey} disabled={!key.trim() || testing}>{testing ? 'Checking…' : s.tmdbKey ? 'Update' : 'Connect'}</button>
@@ -182,7 +182,7 @@ export function Settings() {
         <div className="setting">
           <div>
             <strong>Tell me when something is ready to watch</strong>
-            <p className="muted small">{notificationsSupported() ? 'Works while Torrent TV is open or running in the background.' : "This browser doesn't support notifications."}</p>
+            <p className="muted small">{notificationsSupported() ? 'Works while Vidora is open or running in the background.' : "This browser doesn't support notifications."}</p>
           </div>
           <Toggle label="Notifications" on={s.notifications} onChange={async (v) => {
             if (v && !(await requestNotifications())) {
@@ -228,7 +228,7 @@ export function Settings() {
           <p className="ok-text small"><Icon name="check" size={14} />You're using the installed app.</p>
         ) : installPrompt ? (
           <div className="setting">
-            <div><strong>Install Torrent TV on this device</strong><p className="muted small">Adds it to your home screen or app list, opens full screen, works offline for downloaded videos.</p></div>
+            <div><strong>Install Vidora on this device</strong><p className="muted small">Adds it to your home screen or app list, opens full screen, works offline for downloaded videos.</p></div>
             <button className="btn small primary" onClick={() => installPrompt.prompt()}><Icon name="download" size={16} />Install</button>
           </div>
         ) : (
@@ -269,7 +269,7 @@ export function Settings() {
           {feedError && <p className="warn-text small">{feedError}</p>}
           <label className="check">
             <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />
-            <span>I'll only download content I have the right to. Torrent TV doesn't vet feeds I add.</span>
+            <span>I'll only download content I have the right to. Vidora doesn't vet feeds I add.</span>
           </label>
           <button className="btn primary small" disabled={!!feedError || !feed.name || !feed.url || !ack} onClick={addFeed}>Add feed</button>
         </details>

@@ -1,4 +1,4 @@
-package app.torrenttv.mobile;
+package app.vidora.mobile;
 
 import com.getcapacitor.BridgeActivity;
 

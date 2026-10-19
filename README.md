@@ -1,6 +1,6 @@
-# Torrent TV
+# Vidora
 
-Pick the shows and films you love. Torrent TV downloads them, fetches new episodes automatically as they air, shows posters and details for everything, and checks every file before it reaches you.
+Pick the shows and films you love. Vidora downloads them, fetches new episodes automatically as they air, shows posters and details for everything, and checks every file before it reaches you.
 
 Use it in any browser (and install it to your phone's home screen), or download the app for **Android, Windows, Mac, Linux and Chromebook**. **[How to install on each device →](docs/INSTALL.md)**
 
@@ -35,7 +35,7 @@ Use it in any browser (and install it to your phone's home screen), or download 
 
 Built in: **Internet Archive**, which hosts thousands of public domain films and classic TV episodes with official, verified torrents.
 
-Advanced: add your own **Torznab** feed (the standard used by Sonarr and Radarr, usually through a self-hosted Prowlarr or Jackett). Torrent TV doesn't ship or recommend any indexers; you choose what to connect and are responsible for downloading only content you have the right to. Results from your feeds pass the same safety checks, plus a minimum-seeders bar.
+Advanced: add your own **Torznab** feed (the standard used by Sonarr and Radarr, usually through a self-hosted Prowlarr or Jackett). Vidora doesn't ship or recommend any indexers; you choose what to connect and are responsible for downloading only content you have the right to. Results from your feeds pass the same safety checks, plus a minimum-seeders bar.
 
 ## Getting started
 

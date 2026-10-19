@@ -1,6 +1,6 @@
 # Security model
 
-Torrent TV assumes every torrent is hostile until proven otherwise. Each download passes these layers in order:
+Vidora assumes every torrent is hostile until proven otherwise. Each download passes these layers in order:
 
 | Layer | What it does | Where |
 |---|---|---|

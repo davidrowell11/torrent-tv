@@ -1,6 +1,6 @@
 {
-  "name": "Torrent TV",
-  "short_name": "Torrent TV",
+  "name": "Vidora",
+  "short_name": "Vidora",
   "description": "Pick your shows and films. New episodes arrive on their own, every file checked.",
   "id": "./",
   "start_url": "./",

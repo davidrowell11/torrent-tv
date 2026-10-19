@@ -52,7 +52,7 @@ function Shell() {
       <nav className="sidebar" aria-label="Main">
         <div className="brand">
           <span className="logo"><Icon name="play" size={16} /></span>
-          <span>Torrent<b>TV</b></span>
+          <span>Vid<b>ora</b></span>
         </div>
         {NAV.map((n) => (
           <button key={n.id} className={`nav-item ${view === n.id ? 'active' : ''}`} onClick={() => setView(n.id)} aria-current={view === n.id ? 'page' : undefined}>

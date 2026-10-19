@@ -1,7 +1,7 @@
 // Service worker: lets the web app be installed (Android, Chromebook, desktop),
 // opens offline, and shows "ready to watch" notifications.
 // It caches the app itself only; it never caches downloads or API responses.
-const SHELL = 'torrent-tv-shell-v2';
+const SHELL = 'vidora-shell-v3';
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(caches.open(SHELL).then((c) => c.addAll(['./', './index.html', './icon-192.png'])));

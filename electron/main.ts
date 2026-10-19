@@ -13,7 +13,7 @@ import { sanitizeMeta, writeArtworkAndInfo, type Meta } from './metadata.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(here, '..', '..');
-const downloadRoot = join(app.getPath('downloads'), 'Torrent TV');
+const downloadRoot = join(app.getPath('downloads'), 'Vidora');
 const quarantineRoot = join(downloadRoot, '.quarantine');
 const EXTERNAL_OK = ['archive.org', 'themoviedb.org', 'github.com', 'trakt.tv'];
 

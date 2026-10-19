@@ -2,8 +2,8 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 // Android app: the same web app, packaged with Capacitor.
 const config: CapacitorConfig = {
-  appId: 'app.torrenttv.mobile',
-  appName: 'Torrent TV',
+  appId: 'app.vidora.mobile',
+  appName: 'Vidora',
   webDir: 'dist',
   backgroundColor: '#0b0d12',
   android: {

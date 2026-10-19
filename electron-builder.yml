@@ -1,5 +1,5 @@
-appId: app.torrenttv.desktop
-productName: Torrent TV
+appId: app.vidora.desktop
+productName: Vidora
 directories:
   output: release
 files:

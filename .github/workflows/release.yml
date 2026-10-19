@@ -67,11 +67,11 @@ jobs:
       - name: Build APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
-      - run: mkdir -p out && cp android/app/build/outputs/apk/debug/app-debug.apk out/TorrentTV-android.apk
+      - run: mkdir -p out && cp android/app/build/outputs/apk/debug/app-debug.apk out/Vidora-android.apk
       - uses: actions/upload-artifact@v4
         with:
           name: android
-          path: out/TorrentTV-android.apk
+          path: out/Vidora-android.apk
           if-no-files-found: error
 
   publish:
@@ -85,16 +85,16 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(env.VERSION, 'v') && env.VERSION || format('v{0}', env.VERSION) }}
-          name: Torrent TV ${{ env.VERSION }}
+          name: Vidora ${{ env.VERSION }}
           files: files/*
           body: |
             Downloads for every device. See the install guide: https://github.com/${{ github.repository }}/blob/main/docs/INSTALL.md
 
             | Device | File |
             |---|---|
-            | Android phone or tablet | `TorrentTV-android.apk` |
-            | Windows | `Torrent TV Setup *.exe` |
-            | Mac | `Torrent TV-*.dmg` |
+            | Android phone or tablet | `Vidora-android.apk` |
+            | Windows | `Vidora Setup *.exe` |
+            | Mac | `Vidora-*.dmg` |
             | Linux / Chromebook (Linux on) | `.deb` or `.AppImage` |
 
             Or skip downloading and use it in your browser: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
