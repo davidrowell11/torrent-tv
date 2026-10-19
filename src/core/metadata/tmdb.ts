@@ -36,6 +36,15 @@ export class Tmdb {
       .map((r) => toInfo(r, (r.media_type ?? kind) as MediaKind));
   }
 
+  /** Best TMDB match for a title we only know by name (e.g. an Internet Archive film). */
+  async match(kind: MediaKind, title: string, year?: number, signal?: AbortSignal): Promise<TitleInfo | undefined> {
+    const params: Record<string, string> = { query: title.replace(/\(\d{4}\)|\[.*?\]/g, '').trim(), include_adult: 'false' };
+    if (year) params[kind === 'movie' ? 'year' : 'first_air_date_year'] = String(year);
+    const body = await this.get<{ results: TmdbResult[] }>(`/search/${kind}`, params, signal);
+    const hit = body.results[0];
+    return hit ? this.details(kind, hit.id, signal) : undefined;
+  }
+
   async details(kind: MediaKind, id: number, signal?: AbortSignal): Promise<TitleInfo> {
     return toInfo(await this.get<TmdbResult>(`/${kind}/${id}`, {}, signal), kind);
   }

@@ -1,3 +1,5 @@
+import type { DownloadMeta } from '../types';
+
 export interface DownloadInfo {
   id: string;
   /** What the user asked for, e.g. "Night of the Living Dead" or "The Twilight Zone S01E03". */
@@ -31,7 +33,7 @@ export interface VpnStatus {
 
 export interface TorrentEngine {
   kind: 'browser' | 'desktop';
-  add(torrentUrl: string, label: string, allowedHosts: string[]): Promise<string>;
+  add(torrentUrl: string, label: string, allowedHosts: string[], meta?: DownloadMeta): Promise<string>;
   list(): Promise<DownloadInfo[]>;
   pause(id: string): Promise<void>;
   resume(id: string): Promise<void>;

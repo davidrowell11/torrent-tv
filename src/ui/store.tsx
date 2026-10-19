@@ -8,7 +8,7 @@ import {
 import { Tmdb } from '../core/metadata/tmdb';
 import { iaTorrentUrl } from '../core/sources/internetArchive';
 import { allSources, findTorrents } from '../core/sources/registry';
-import type { EpisodeRef, LibraryItem, SearchQuery, TitleInfo, TorrentCandidate } from '../core/types';
+import type { DownloadMeta, EpisodeRef, LibraryEpisode, LibraryItem, SearchQuery, TitleInfo, TorrentCandidate } from '../core/types';
 
 export interface Toast {
   id: number;
@@ -130,7 +130,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setStatus({ status: 'not-found', note: "No trusted source has this yet. We'll keep checking." });
           return;
         }
-        const downloadId = await engine.add(pick.torrentUrl, label, sourceHosts(pick.sourceId, ref.current.settings));
+        const info = ref.current.library.find((i) => keyOf(i.info) === key)?.info ?? item.info;
+        const epInfo = ep && item.episodes?.find((e) => e.season === ep.season && e.episode === ep.episode);
+        const meta: DownloadMeta = {
+          title: info.title, kind: info.kind, year: info.year, overview: info.overview, rating: info.rating, genres: info.genres,
+          posterUrl: info.posterUrl, backdropUrl: info.backdropUrl, tmdbId: info.tmdbId || undefined,
+          ...(ep ? { season: ep.season, episode: ep.episode, episodeTitle: ep.title ?? epInfo?.title, airDate: ep.airDate ?? epInfo?.airDate } : {}),
+        };
+        const downloadId = await engine.add(pick.torrentUrl, label, sourceHosts(pick.sourceId, ref.current.settings), meta);
         setStatus({ status: 'downloading', downloadId });
         toast(`Downloading ${label}`, 'good');
       } catch (err) {
@@ -153,7 +160,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const { start, wanted } = episodesToFetch(item, aired);
           patchItem(key, (i) => {
             let next: LibraryItem = { ...i, followFrom: i.followFrom ?? start, lastCheckedAt: new Date().toISOString() };
-            for (const ep of wanted) next = updateEpisode(next, ep, { title: ep.title, airDate: ep.airDate });
+            for (const ep of wanted) {
+              // Episodes no source had last time go back in the queue to be tried again.
+              const retry: Partial<LibraryEpisode> = i.episodes?.find((x) => x.season === ep.season && x.episode === ep.episode)?.status === 'not-found' ? { status: 'wanted' } : {};
+              next = updateEpisode(next, ep, { title: ep.title, airDate: ep.airDate, ...retry });
+            }
             return next;
           });
           if (wanted.length) toast(`${wanted.length} new episode${wanted.length > 1 ? 's' : ''} of ${item.info.title}`, 'good');
@@ -172,7 +183,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const s = ref.current;
       const active = downloadsRef.current.filter((d) => d.phase === 'downloading' || d.phase === 'checking').length;
       let slots = s.settings.maxActive - active;
-      for (const item of s.library) {
+      // Only shows the user follows are fetched automatically; everything else waits for a click.
+      for (const item of s.library.filter((i) => i.follow)) {
         for (const ep of item.episodes ?? []) {
           if (slots <= 0) return;
           if (ep.status === 'wanted') {
@@ -186,6 +198,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const t = setInterval(run, 60_000);
     return () => clearInterval(t);
   }, [checkNow, get]);
+  /** Make sure every title in the library has full artwork and info, not just what a search result carried. */
+  const enrich = async (info: TitleInfo) => {
+    if (!tmdb) return;
+    try {
+      const full = info.tmdbId ? await tmdb.details(info.kind, info.tmdbId) : await tmdb.match(info.kind, info.title, info.year);
+      if (!full) return;
+      const key = keyOf(info);
+      const merged: TitleInfo = {
+        ...info, ...full,
+        // Keep the identity the library already uses for this title.
+        tmdbId: info.tmdbId, iaId: info.iaId,
+        posterUrl: full.posterUrl ?? info.posterUrl,
+        overview: full.overview || info.overview,
+      };
+      ref.current = { ...ref.current, library: updateTitle(ref.current.library, key, (i) => ({ ...i, info: merged })) };
+      patchItem(key, (i) => ({ ...i, info: merged }));
+    } catch {
+      // Artwork is nice to have; the title still works without it.
+    }
+  };
+
+  // Fill in artwork/info for anything added before a TMDB key was set.
+  useEffect(() => {
+    if (!tmdb) return;
+    ref.current.library.filter((i) => !i.info.backdropUrl || !i.info.genres).forEach((i) => enrich(i.info));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tmdb]);
+
   const value: Store = {
     state,
     downloads,
@@ -200,6 +240,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Update the ref right away so a download started in the same click can find the item.
       ref.current = { ...ref.current, library: addTitle(ref.current.library, info) };
       setState((s) => ({ ...s, library: addTitle(s.library, info) }));
+      enrich(info);
       toast(info.kind === 'tv' ? `Following ${info.title}. New episodes will download automatically.` : `Added ${info.title}`, 'good');
       if (info.kind === 'tv') setTimeout(() => checkNow(keyOf(info)), 50);
     },

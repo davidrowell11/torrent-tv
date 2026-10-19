@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('torrentTV', {
   platform: process.platform,
-  add: (url, label, hosts) => ipcRenderer.invoke('tt:add', url, label, hosts),
+  add: (url, label, hosts, meta) => ipcRenderer.invoke('tt:add', url, label, hosts, meta),
   list: () => ipcRenderer.invoke('tt:list'),
   pause: (id) => ipcRenderer.invoke('tt:pause', id),
   resume: (id) => ipcRenderer.invoke('tt:resume', id),

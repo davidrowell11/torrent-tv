@@ -16,6 +16,23 @@ export interface TitleInfo {
   genres?: string[];
 }
 
+/** Artwork and info saved next to a finished download (poster, background, .nfo for media players). */
+export interface DownloadMeta {
+  title: string;
+  kind: MediaKind;
+  year?: number;
+  overview?: string;
+  rating?: number;
+  genres?: string[];
+  posterUrl?: string;
+  backdropUrl?: string;
+  tmdbId?: number;
+  season?: number;
+  episode?: number;
+  episodeTitle?: string;
+  airDate?: string;
+}
+
 export interface EpisodeRef {
   season: number;
   episode: number;

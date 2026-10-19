@@ -9,6 +9,7 @@ import { checkFile as checkSafeFile, checkTorrent, isTrustedTorrentUrl, isVideo 
 import { verifyContent } from '../src/core/sniff.js';
 import { availableScanner, scanFile } from './scan.js';
 import { detectVpn } from './vpn.js';
+import { sanitizeMeta, writeArtworkAndInfo, type Meta } from './metadata.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(here, '..', '..');
@@ -19,7 +20,7 @@ const EXTERNAL_OK = ['archive.org', 'themoviedb.org', 'github.com'];
 type Phase = 'downloading' | 'checking' | 'ready' | 'awaiting-scan' | 'blocked';
 interface Entry {
   label: string; torrent?: NodeTorrent; blockedReason?: string; error?: string; skipped: number; userPaused: boolean;
-  phase: Phase; scanNote?: string; quarantineDir: string;
+  phase: Phase; scanNote?: string; quarantineDir: string; meta?: Meta;
   /** Files that passed every check, now in the library folder. */
   finalFiles: string[];
   snapshot?: { name: string; size: number; files: string[] };
@@ -81,12 +82,26 @@ function isLocalFeed(url: string, hosts: string[]) {
   }
 }
 
-function safeFolder(label: string) {
-  const clean = label.replace(/[^\p{L}\p{N} ._()-]/gu, '').replace(/^\.+/, '').slice(0, 120) || 'download';
-  const dir = resolve(downloadRoot, clean);
-  if (!dir.startsWith(downloadRoot + sep)) throw new Error('Invalid folder');
-  mkdirSync(dir, { recursive: true });
-  return dir;
+const cleanName = (s: string) => s.replace(/[^\p{L}\p{N} ._()'&,-]/gu, '').replace(/^[.\s]+|[.\s]+$/g, '').slice(0, 120) || 'download';
+
+/**
+ * Library layout media players understand:
+ *   Films/Title (Year)/            TV/Show/Season 01/
+ * Returns the title folder (where artwork goes) and the folder the video goes in.
+ */
+function libraryFolders(label: string, meta?: Meta) {
+  let titleDir: string, videoDir: string;
+  if (meta?.kind === 'tv' && meta.season !== undefined) {
+    titleDir = resolve(downloadRoot, 'TV', cleanName(meta.title));
+    videoDir = resolve(titleDir, `Season ${String(meta.season).padStart(2, '0')}`);
+  } else if (meta) {
+    titleDir = videoDir = resolve(downloadRoot, 'Films', cleanName(meta.year ? `${meta.title} (${meta.year})` : meta.title));
+  } else {
+    titleDir = videoDir = resolve(downloadRoot, cleanName(label));
+  }
+  if (!titleDir.startsWith(downloadRoot + sep) || !videoDir.startsWith(downloadRoot + sep)) throw new Error('Invalid folder');
+  mkdirSync(videoDir, { recursive: true });
+  return { titleDir, videoDir };
 }
 
 function info(id: string, e: Entry) {
@@ -145,23 +160,30 @@ async function releaseFromQuarantine(e: Entry) {
       e.scanNote = `Checked: real video, ${result.scanner} found no threats`;
     }
   }
-  const dest = safeFolder(e.label);
+  const { titleDir, videoDir: dest } = libraryFolders(e.label, e.meta);
   e.finalFiles = [];
   for (const rel of files) {
-    const target = resolve(dest, rel.split(/[\\/]/).pop()!);
+    const original = rel.split(/[\\/]/).pop()!;
+    // Episodes are renamed "Show S01E02.ext" so players match them; films keep their name.
+    const ext = original.slice(original.lastIndexOf('.'));
+    const name = e.meta?.kind === 'tv' && isVideo(original) ? `${cleanName(e.label)}${ext}` : original;
+    const target = resolve(dest, name);
     if (!target.startsWith(dest + sep)) return block(e, 'Unsafe file path');
     await mkdir(dirname(target), { recursive: true });
     await rename(resolve(e.quarantineDir, rel), target);
     e.finalFiles.push(target);
   }
   rmSync(e.quarantineDir, { recursive: true, force: true });
+  if (e.meta) await writeArtworkAndInfo(e.meta, titleDir, e.finalFiles.find((f) => isVideo(f)));
   e.phase = 'ready';
 }
 
-ipcMain.handle('tt:add', async (_ev, rawUrl: unknown, rawLabel: unknown, rawHosts: unknown) => {
+ipcMain.handle('tt:add', async (_ev, rawUrl: unknown, rawLabel: unknown, rawHosts: unknown, rawMeta: unknown) => {
   const url = str(rawUrl), label = str(rawLabel, 200), hosts = strList(rawHosts);
   const id = randomUUID();
-  const entry: Entry = { label, skipped: 0, userPaused: false, phase: 'downloading', quarantineDir: join(quarantineRoot, id), finalFiles: [] };
+  const entry: Entry = {
+    label, skipped: 0, userPaused: false, phase: 'downloading', quarantineDir: join(quarantineRoot, id), finalFiles: [], meta: sanitizeMeta(rawMeta),
+  };
   entries.set(id, entry);
   if (requireVpn && !detectVpn().connected) {
     entry.error = 'No VPN detected. Connect your VPN, or turn off "Require VPN" in Settings.';

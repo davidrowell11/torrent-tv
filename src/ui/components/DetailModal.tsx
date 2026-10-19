@@ -19,8 +19,15 @@ export function DetailModal({ info: initial, onClose }: { info: TitleInfo; onClo
 
   // Fill in genres etc. from the full TMDB record.
   useEffect(() => {
-    if (!store.tmdb || !initial.tmdbId) return;
+    if (!store.tmdb) return;
     const ac = new AbortController();
+    // Free classics come from Internet Archive by name: look up their artwork and info too.
+    if (!initial.tmdbId) {
+      store.tmdb.match(initial.kind, initial.title, initial.year, ac.signal)
+        .then((m) => m && setInfo({ ...m, tmdbId: 0, iaId: initial.iaId }))
+        .catch(() => {});
+      return () => ac.abort();
+    }
     store.tmdb.details(initial.kind, initial.tmdbId, ac.signal).then(setInfo).catch(() => {});
     if (initial.kind === 'tv') {
       store.tmdb.airedEpisodes(initial.tmdbId, new Date(), ac.signal).then((eps) => {
@@ -85,6 +92,7 @@ export function DetailModal({ info: initial, onClose }: { info: TitleInfo; onClo
                     <Icon name={item?.status === 'done' ? 'check' : 'download'} />
                     {item?.status === 'done' ? 'Downloaded' : item?.status === 'downloading' ? 'Downloading…' : 'Download'}
                   </button>
+                  {!item && <button className="btn ghost" onClick={ensureAdded}><Icon name="plus" />Add to library</button>}
                   {!info.iaId && <button className="btn ghost" onClick={lookForSources} disabled={looking}><Icon name="search" />{looking ? 'Searching…' : 'Choose source'}</button>}
                 </>
               )}

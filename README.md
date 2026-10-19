@@ -16,7 +16,9 @@ Runs in any modern browser (installable as an app on Chromebooks) and as a deskt
 
 - **Discover**: trending titles, instant search, and a shelf of free public-domain classics you can download right away.
 - **Follow shows**: new episodes download on their own (checked every few hours). Or grab a whole series from episode one.
-- **Artwork and info**: posters, backdrops, ratings, genres and episode lists from [TMDB](https://www.themoviedb.org/).
+- **You choose what downloads**: nothing is fetched unless you press Download or Get, or follow a show. Unfollow and its episodes stop. Films can be saved to your library without downloading.
+- **Artwork and info**: posters, backdrops, ratings, genres and episode lists from [TMDB](https://www.themoviedb.org/), filled in for every title in your library (free classics are matched to TMDB too).
+- **Media-player ready (desktop)**: downloads are filed as `Films/Title (Year)/` and `TV/Show/Season 01/Show S01E02.mp4`, with `poster.jpg`, `fanart.jpg` and `.nfo` info files that Plex, Jellyfin and Kodi read.
 - **Safe by default**: file allowlist, quarantine, content verification, antivirus scan, VPN kill switch. See [SECURITY.md](SECURITY.md).
 - **Your data stays local**: library and settings live on your device only.
 
