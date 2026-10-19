@@ -7,12 +7,17 @@ files:
   - dist-electron/**
   - package.json
 asar: true
+# Native deps here (node-datachannel, utp-native, bufferutil) ship N-API prebuilds that work in Electron as-is.
+npmRebuild: false
 mac:
-  target: [dmg]
+  target:
+    - target: dmg
+      arch: [universal]
   category: public.app-category.entertainment
-  hardenedRuntime: true
+  icon: assets/icon-only.png
 win:
   target: [nsis]
+  icon: assets/icon-only.png
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
@@ -20,3 +25,5 @@ nsis:
 linux:
   target: [AppImage, deb]
   category: AudioVideo
+  icon: assets/icon-only.png
+  maintainer: David Rowell

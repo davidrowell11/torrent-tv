@@ -11,6 +11,6 @@ createRoot(document.getElementById('root')!).render(
 );
 
 // Installable on Chromebooks and desktops as an app from the browser.
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && !('Capacitor' in window)) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }

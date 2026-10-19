@@ -18,7 +18,9 @@ describe('library', () => {
     const out = reconcile(lib, [{ id: 'a', phase: 'ready', scanNote: 'clean' }, { id: 'b', phase: 'blocked', blockedReason: 'Windows program disguised as .mp4' }]);
     expect(out.find((i) => keyOf(i.info) === 'movie:7')?.status).toBe('done');
     expect(out.find((i) => keyOf(i.info) === 'tv:8')?.episodes?.[0]).toMatchObject({ status: 'blocked', note: 'Windows program disguised as .mp4' });
-    expect(reconcile(out, [])).toBe(out);
+    expect(reconcile(out, [{ id: 'a', phase: 'ready' }])).toBe(out);
+    // The engine forgot the finished film (deleted outside the app): it's marked removed, not re-downloaded.
+    expect(reconcile(out, []).find((i) => keyOf(i.info) === 'movie:7')?.status).toBe('removed');
   });
   it('round-trips through storage and survives corrupt data', () => {
     const mem = new Map<string, string>();

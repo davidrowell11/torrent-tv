@@ -1,0 +1,100 @@
+# Builds the downloadable apps and attaches them to a GitHub Release.
+# Run it from the Actions tab ("Release apps" → Run workflow), or push a tag like v0.2.0.
+name: Release apps
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for the release, e.g. 0.2.0'
+        required: true
+        default: '0.2.0'
+
+permissions:
+  contents: write
+
+env:
+  VERSION: ${{ github.event.inputs.version || github.ref_name }}
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:desktop
+      - run: npx electron-builder --publish never
+        env:
+          # Builds are not code-signed yet; see docs/INSTALL.md for opening them.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
+          if-no-files-found: error
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npm test
+      - run: npm run build && npx cap sync android
+      - name: Build APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+      - run: mkdir -p out && cp android/app/build/outputs/apk/debug/app-debug.apk out/TorrentTV-android.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: out/TorrentTV-android.apk
+          if-no-files-found: error
+
+  publish:
+    needs: [desktop, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: files
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(env.VERSION, 'v') && env.VERSION || format('v{0}', env.VERSION) }}
+          name: Torrent TV ${{ env.VERSION }}
+          files: files/*
+          body: |
+            Downloads for every device. See the install guide: https://github.com/${{ github.repository }}/blob/main/docs/INSTALL.md
+
+            | Device | File |
+            |---|---|
+            | Android phone or tablet | `TorrentTV-android.apk` |
+            | Windows | `Torrent TV Setup *.exe` |
+            | Mac | `Torrent TV-*.dmg` |
+            | Linux / Chromebook (Linux on) | `.deb` or `.AppImage` |
+
+            Or skip downloading and use it in your browser: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/

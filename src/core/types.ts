@@ -58,15 +58,29 @@ export interface TorrentCandidate {
   detailsUrl?: string;
 }
 
-export type LibraryItemStatus = 'wanted' | 'searching' | 'downloading' | 'done' | 'not-found' | 'blocked';
+/** 'removed' = the file was deleted (by the user or cleanup); it won't be downloaded again automatically. */
+export type LibraryItemStatus = 'wanted' | 'searching' | 'downloading' | 'done' | 'not-found' | 'blocked' | 'removed';
 
-export interface LibraryEpisode extends EpisodeRef {
+/** Where the viewer stopped, for resume. */
+export interface PlaybackPosition {
+  seconds: number;
+  duration: number;
+  updatedAt: string;
+}
+
+interface Watchable {
+  watched?: boolean;
+  watchedAt?: string;
+  position?: PlaybackPosition;
+}
+
+export interface LibraryEpisode extends EpisodeRef, Watchable {
   status: LibraryItemStatus;
   downloadId?: string;
   note?: string;
 }
 
-export interface LibraryItem {
+export interface LibraryItem extends Watchable {
   info: TitleInfo;
   addedAt: string;
   /** Movies: overall status. Shows: summary only; episodes carry their own status. */

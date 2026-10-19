@@ -31,15 +31,36 @@ export interface VpnStatus {
   killSwitchActive: boolean;
 }
 
+export interface SubtitleTrack {
+  label: string;
+  lang: string;
+  /** WebVTT URL ready for a <track> element. */
+  url: string;
+}
+
+export interface PlayableMedia {
+  videoUrl: string;
+  subtitles: SubtitleTrack[];
+  /** Release this media's object URLs when the player closes. */
+  release(): void;
+}
+
 export interface TorrentEngine {
   kind: 'browser' | 'desktop';
   add(torrentUrl: string, label: string, allowedHosts: string[], meta?: DownloadMeta): Promise<string>;
   list(): Promise<DownloadInfo[]>;
   pause(id: string): Promise<void>;
   resume(id: string): Promise<void>;
+  /** Stop a download and forget it. Files already in the library are kept. */
   remove(id: string): Promise<void>;
-  /** Desktop: reveal the file. Browser: return a blob URL to play or save. */
-  open(id: string): Promise<string | void>;
+  /** Delete a finished download's files from this device, then forget it. */
+  deleteFiles(id: string): Promise<void>;
+  /** Video and subtitles for the built-in player, once a download is ready. */
+  media(id: string): Promise<PlayableMedia | undefined>;
+  /** Desktop: show the file in its folder. */
+  reveal?(id: string): Promise<void>;
+  /** Bytes used by finished downloads on this device. */
+  storageUsed(): Promise<number>;
   vpn(): Promise<VpnStatus>;
   setRequireVpn(on: boolean): Promise<void>;
   setRequireScan(on: boolean): Promise<void>;

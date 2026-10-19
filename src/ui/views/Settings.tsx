@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { notificationsSupported, requestNotifications } from '../../core/notify';
+import { Trakt, type DeviceCode } from '../../core/sync/trakt';
+import { fmtBytes } from './Downloads';
 import { Tmdb } from '../../core/metadata/tmdb';
 import { builtInSources } from '../../core/sources/registry';
 import { validateTorznabUrl } from '../../core/sources/torznab';
@@ -14,13 +17,45 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange(v: boolean): vo
 }
 
 export function Settings() {
-  const { state, updateSettings, toast, vpn, scanner, engineKind } = useStore();
+  const { state, updateSettings, toast, vpn, scanner, engineKind, storageUsed, trakt, syncTrakt } = useStore();
   const s = state.settings;
   const [key, setKey] = useState(s.tmdbKey);
   const [testing, setTesting] = useState(false);
   const [feed, setFeed] = useState({ name: '', url: '', apiKey: '', minSeeders: 10 });
   const [ack, setAck] = useState(false);
   const feedError = feed.url ? validateTorznabUrl(feed.url) : undefined;
+
+  // Trakt sign-in with a short code entered on trakt.tv.
+  const [traktIds, setTraktIds] = useState({ clientId: s.trakt?.clientId ?? '', clientSecret: s.trakt?.clientSecret ?? '' });
+  const [code, setCode] = useState<DeviceCode | null>(null);
+  const cancelLogin = useRef<AbortController | null>(null);
+  async function connectTrakt() {
+    const t = new Trakt(traktIds, (auth) => updateSettings({ trakt: auth }));
+    try {
+      const c = await t.startDeviceLogin();
+      setCode(c);
+      cancelLogin.current = new AbortController();
+      const auth = await t.finishDeviceLogin(c, cancelLogin.current.signal);
+      toast(`Connected to Trakt${auth.username ? ` as ${auth.username}` : ''}`, 'good');
+    } catch (e) {
+      if (!cancelLogin.current?.signal.aborted) toast(e instanceof Error ? e.message : String(e), 'warn');
+    } finally {
+      setCode(null);
+    }
+  }
+  useEffect(() => () => cancelLogin.current?.abort(), []);
+
+  // "Install app" button when the browser offers it (Android, Chrome, Edge).
+  const [installPrompt, setInstallPrompt] = useState<(Event & { prompt(): Promise<void> }) | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as Event & { prompt(): Promise<void> });
+    };
+    window.addEventListener('beforeinstallprompt', on);
+    return () => window.removeEventListener('beforeinstallprompt', on);
+  }, []);
+  const standalone = typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches;
 
   async function saveKey() {
     setTesting(true);
@@ -102,6 +137,104 @@ export function Settings() {
             {[1, 2, 3, 4, 6].map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
         </div>
+      </section>
+
+      <section className="card">
+        <h2><Icon name="film" />Quality</h2>
+        <div className="setting">
+          <div><strong>Preferred quality</strong><p className="muted small">Used when a source offers more than one version. 720p is a good fit for phones.</p></div>
+          <select value={s.quality.preferred} onChange={(e) => updateSettings({ quality: { ...s.quality, preferred: e.target.value as typeof s.quality.preferred } })}>
+            <option value="any">Best available</option>
+            <option value="480p">480p (smallest)</option>
+            <option value="720p">720p HD</option>
+            <option value="1080p">1080p Full HD</option>
+            <option value="2160p">4K</option>
+          </select>
+        </div>
+        <div className="setting">
+          <div><strong>Largest file to download</strong><p className="muted small">Anything bigger is skipped.</p></div>
+          <select value={s.quality.maxSizeGB} onChange={(e) => updateSettings({ quality: { ...s.quality, maxSizeGB: Number(e.target.value) } })}>
+            {[1, 2, 4, 8, 15, 30, 0].map((g) => <option key={g} value={g}>{g ? `${g} GB` : 'No limit'}</option>)}
+          </select>
+        </div>
+      </section>
+
+      <section className="card">
+        <h2><Icon name="disk" />Storage</h2>
+        <div className="setting">
+          <div><strong>Delete after watching</strong><p className="muted small">Frees space automatically once you've watched something. {storageUsed > 0 ? `${fmtBytes(storageUsed)} used now.` : ''}</p></div>
+          <select value={s.cleanup.afterWatchDays} onChange={(e) => updateSettings({ cleanup: { ...s.cleanup, afterWatchDays: Number(e.target.value) } })}>
+            <option value={-1}>Never</option>
+            <option value={0}>Right away</option>
+            <option value={1}>After 1 day</option>
+            <option value={7}>After 1 week</option>
+            <option value={30}>After 30 days</option>
+          </select>
+        </div>
+        <div className="setting">
+          <div><strong>Include films</strong><p className="muted small">Off: only TV episodes are cleaned up.</p></div>
+          <Toggle label="Include films in cleanup" on={s.cleanup.includeFilms} onChange={(v) => updateSettings({ cleanup: { ...s.cleanup, includeFilms: v } })} />
+        </div>
+      </section>
+
+      <section className="card">
+        <h2><Icon name="bell" />Notifications</h2>
+        <div className="setting">
+          <div>
+            <strong>Tell me when something is ready to watch</strong>
+            <p className="muted small">{notificationsSupported() ? 'Works while Torrent TV is open or running in the background.' : "This browser doesn't support notifications."}</p>
+          </div>
+          <Toggle label="Notifications" on={s.notifications} onChange={async (v) => {
+            if (v && !(await requestNotifications())) {
+              toast('Notifications are blocked. Allow them in your browser or phone settings.', 'warn');
+              return;
+            }
+            updateSettings({ notifications: v });
+          }} />
+        </div>
+      </section>
+
+      <section className="card">
+        <h2><Icon name="sync" />Watched history (Trakt)</h2>
+        {trakt && s.trakt ? (
+          <>
+            <p className="ok-text small"><Icon name="check" size={14} />Connected{s.trakt.username ? ` as ${s.trakt.username}` : ''}. What you watch here is added to Trakt, and Trakt history marks titles watched here.</p>
+            <div className="actions">
+              <button className="btn small ghost" onClick={syncTrakt}><Icon name="refresh" size={16} />Sync now</button>
+              <button className="btn small subtle" onClick={() => updateSettings({ trakt: undefined })}>Disconnect</button>
+            </div>
+          </>
+        ) : code ? (
+          <div className="trakt-code">
+            <p>Go to <a href={code.verification_url} target="_blank" rel="noreferrer">{code.verification_url}</a> and enter:</p>
+            <div className="code">{code.user_code}</div>
+            <p className="muted small">Waiting for you to approve… <button className="link" onClick={() => cancelLogin.current?.abort()}>Cancel</button></p>
+          </div>
+        ) : (
+          <>
+            <p className="muted">Optional. Keeps what you've watched in sync across devices and other apps. Create a free API app at <a href="https://trakt.tv/oauth/applications/new" target="_blank" rel="noreferrer">trakt.tv</a> (redirect URI: <code>urn:ietf:wg:oauth:2.0:oob</code>), then paste its Client ID and Secret.</p>
+            <div className="form-grid">
+              <input placeholder="Client ID" value={traktIds.clientId} onChange={(e) => setTraktIds({ ...traktIds, clientId: e.target.value.trim() })} autoComplete="off" spellCheck={false} />
+              <input type="password" placeholder="Client Secret" value={traktIds.clientSecret} onChange={(e) => setTraktIds({ ...traktIds, clientSecret: e.target.value.trim() })} autoComplete="off" />
+            </div>
+            <button className="btn small primary" disabled={!traktIds.clientId || !traktIds.clientSecret} onClick={connectTrakt}>Connect Trakt</button>
+          </>
+        )}
+      </section>
+
+      <section className="card">
+        <h2><Icon name="phone" />Get the app</h2>
+        {standalone ? (
+          <p className="ok-text small"><Icon name="check" size={14} />You're using the installed app.</p>
+        ) : installPrompt ? (
+          <div className="setting">
+            <div><strong>Install Torrent TV on this device</strong><p className="muted small">Adds it to your home screen or app list, opens full screen, works offline for downloaded videos.</p></div>
+            <button className="btn small primary" onClick={() => installPrompt.prompt()}><Icon name="download" size={16} />Install</button>
+          </div>
+        ) : (
+          <p className="muted small">On Android, open your browser menu (⋮) and tap <strong>Install app</strong> or <strong>Add to Home screen</strong>. On iPhone, tap Share then <strong>Add to Home Screen</strong>.</p>
+        )}
+        <p className="muted small">Prefer a downloadable app? Windows, Mac, Linux and Android versions are on the <a href="https://github.com/davidrowell11/torrent-tv/releases/latest" target="_blank" rel="noreferrer">releases page</a>. <a href="https://github.com/davidrowell11/torrent-tv/blob/main/docs/INSTALL.md" target="_blank" rel="noreferrer">Step-by-step instructions</a>.</p>
       </section>
 
       <section className="card">

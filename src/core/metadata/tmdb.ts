@@ -49,6 +49,20 @@ export class Tmdb {
     return toInfo(await this.get<TmdbResult>(`/${kind}/${id}`, {}, signal), kind);
   }
 
+  /** Episodes airing from today on (the rest of the current or next season). */
+  async upcomingEpisodes(id: number, today = new Date(), signal?: AbortSignal): Promise<EpisodeRef[]> {
+    const show = await this.get<{ next_episode_to_air?: { season_number: number } | null }>(`/tv/${id}`, {}, signal);
+    const next = show.next_episode_to_air;
+    if (!next) return [];
+    const season = await this.get<{ episodes: { episode_number: number; name: string; air_date: string | null }[] }>(
+      `/tv/${id}/season/${next.season_number}`, {}, signal,
+    );
+    const from = today.toISOString().slice(0, 10);
+    return season.episodes
+      .filter((e) => e.air_date && e.air_date >= from)
+      .map((e) => ({ season: next.season_number, episode: e.episode_number, title: e.name, airDate: e.air_date! }));
+  }
+
   /** Every episode of a show that has already aired, oldest first. */
   async airedEpisodes(id: number, today = new Date(), signal?: AbortSignal): Promise<EpisodeRef[]> {
     const show = await this.get<{ seasons: { season_number: number }[] }>(`/tv/${id}`, {}, signal);

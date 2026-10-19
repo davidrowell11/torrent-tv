@@ -2,7 +2,7 @@ import type { LibraryItemStatus, TitleInfo } from '../../core/types';
 import { Icon } from './Icon';
 
 const statusLabel: Record<LibraryItemStatus, string> = {
-  wanted: 'Queued', searching: 'Searching', downloading: 'Downloading', done: 'Ready', 'not-found': 'Waiting for source', blocked: 'Blocked',
+  wanted: 'Queued', searching: 'Searching', downloading: 'Downloading', done: 'Ready', 'not-found': 'Waiting for source', blocked: 'Blocked', removed: 'Deleted',
 };
 
 export function StatusPill({ status }: { status: LibraryItemStatus }) {

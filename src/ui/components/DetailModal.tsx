@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { epCode, keyOf } from '../../core/library';
 import type { EpisodeRef, TitleInfo, TorrentCandidate } from '../../core/types';
 import { useStore } from '../store';
+import { useConfirm } from './Confirm';
 import { Icon } from './Icon';
 import { StatusPill } from './Poster';
 
+const resumeLabel = (p: { seconds: number }) => `${Math.floor(p.seconds / 60)}m`;
 const fmtSize = (b?: number) => (!b ? '' : b > 1e9 ? `${(b / 1e9).toFixed(1)} GB` : `${Math.round(b / 1e6)} MB`);
 
 export function DetailModal({ info: initial, onClose }: { info: TitleInfo; onClose(): void }) {
   const store = useStore();
+  const confirm = useConfirm();
   const [info, setInfo] = useState(initial);
   const key = keyOf(info);
   const item = store.state.library.find((i) => keyOf(i.info) === key);
@@ -62,6 +65,32 @@ export function DetailModal({ info: initial, onClose }: { info: TitleInfo; onClo
     if (!item) store.add(info);
   };
 
+  const deleteMovieFile = async () => {
+    const ok = await confirm(`Delete ${info.title} from this device?`, 'It stays in your library, so you can download it again any time.', [
+      { value: 'yes', label: 'Delete file', tone: 'danger' },
+    ]);
+    if (ok) await store.deleteDownload(key);
+  };
+
+  const deleteEpisodeFile = async (e: EpisodeRef) => {
+    const ok = await confirm(`Delete ${epCode(e)} from this device?`, undefined, [{ value: 'yes', label: 'Delete file', tone: 'danger' }]);
+    if (ok) await store.deleteDownload(key, e);
+  };
+
+  const removeTitle = async () => {
+    const hasFiles = item?.status === 'done' || item?.episodes?.some((e) => e.status === 'done');
+    const choice = await confirm(
+      `Remove ${info.title}?`,
+      hasFiles ? 'You can also delete what you downloaded, or keep the files on this device.' : undefined,
+      hasFiles
+        ? [{ value: 'delete', label: 'Remove and delete files', tone: 'danger' }, { value: 'keep', label: 'Remove, keep files', tone: 'ghost' }]
+        : [{ value: 'keep', label: 'Remove', tone: 'danger' }],
+    );
+    if (!choice) return;
+    await store.remove(key, choice === 'delete');
+    onClose();
+  };
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <article className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={info.title}>
@@ -80,20 +109,36 @@ export function DetailModal({ info: initial, onClose }: { info: TitleInfo; onClo
               {info.year && <span>{info.year}</span>}
               {info.rating ? <span className="meta-rating"><Icon name="star" size={14} />{info.rating.toFixed(1)}</span> : null}
               {info.genres?.slice(0, 3).map((g) => <span key={g} className="chip">{g}</span>)}
-              {item && <StatusPill status={item.status} />}
+              {item && info.kind === 'movie' && <StatusPill status={item.status} />}
             </div>
             <p className="overview">{info.overview || 'No description available.'}</p>
 
             <div className="actions">
               {info.kind === 'movie' && (
                 <>
-                  <button className="btn primary" disabled={item?.status === 'downloading' || item?.status === 'searching'}
-                    onClick={() => { ensureAdded(); store.get(key); }}>
-                    <Icon name={item?.status === 'done' ? 'check' : 'download'} />
-                    {item?.status === 'done' ? 'Downloaded' : item?.status === 'downloading' ? 'Downloading…' : 'Download'}
-                  </button>
+                  {item?.status === 'done' ? (
+                    <button className="btn primary" onClick={() => store.play(key)}>
+                      <Icon name="play" />{item.position && !item.watched ? `Resume ${resumeLabel(item.position)}` : 'Play'}
+                    </button>
+                  ) : (
+                    <button className="btn primary" disabled={item?.status === 'downloading' || item?.status === 'searching'}
+                      onClick={() => { ensureAdded(); store.get(key); }}>
+                      <Icon name="download" />
+                      {item?.status === 'downloading' ? 'Downloading…' : item?.status === 'searching' ? 'Searching…' : item?.status === 'removed' ? 'Download again' : 'Download'}
+                    </button>
+                  )}
                   {!item && <button className="btn ghost" onClick={ensureAdded}><Icon name="plus" />Add to library</button>}
-                  {!info.iaId && <button className="btn ghost" onClick={lookForSources} disabled={looking}><Icon name="search" />{looking ? 'Searching…' : 'Choose source'}</button>}
+                  {item && (
+                    <button className={`btn ghost ${item.watched ? 'on' : ''}`} onClick={() => store.setWatched(key, undefined, !item.watched)}>
+                      <Icon name="check" />{item.watched ? 'Watched' : 'Mark watched'}
+                    </button>
+                  )}
+                  {!info.iaId && item?.status !== 'done' && (
+                    <button className="btn ghost" onClick={lookForSources} disabled={looking}><Icon name="search" />{looking ? 'Searching…' : 'Choose source'}</button>
+                  )}
+                  {item?.status === 'done' && (
+                    <button className="btn subtle" onClick={deleteMovieFile}><Icon name="trash" />Delete download</button>
+                  )}
                 </>
               )}
               {info.kind === 'tv' && (
@@ -105,9 +150,9 @@ export function DetailModal({ info: initial, onClose }: { info: TitleInfo; onClo
                   <button className="btn primary" onClick={ensureAdded}><Icon name="bell" />Follow show</button>
                 )
               )}
-              {item && <button className="btn subtle" onClick={() => { store.remove(key); onClose(); }}><Icon name="trash" />Remove</button>}
+              {item && <button className="btn subtle" onClick={removeTitle}><Icon name="close" />Remove from library</button>}
             </div>
-            {item?.note && <p className="note"><Icon name={item.status === 'blocked' ? 'alert' : 'shield'} size={16} />{item.note}</p>}
+            {item?.note && item.status !== 'done' && <p className="note"><Icon name={item.status === 'blocked' ? 'alert' : 'shield'} size={16} />{item.note}</p>}
             {info.kind === 'tv' && item?.follow && (
               <p className="hint">New episodes download automatically as they air.{' '}
                 <button className="link" onClick={() => store.setFollow(key, true, true)}>Get every episode from the start</button>
@@ -141,12 +186,22 @@ export function DetailModal({ info: initial, onClose }: { info: TitleInfo; onClo
                   {aired.filter((e) => e.season === season).reverse().map((e) => {
                     const st = epStatus(e);
                     return (
-                      <li key={epCode(e)}>
+                      <li key={epCode(e)} className={st?.watched ? 'watched' : ''}>
+                        <button className={`watch-dot ${st?.watched ? 'on' : ''}`} aria-label={st?.watched ? 'Mark unwatched' : 'Mark watched'}
+                          title={st?.watched ? 'Watched' : 'Mark watched'}
+                          onClick={() => { ensureAdded(); store.setWatched(key, e, !st?.watched); }}>
+                          <Icon name="check" size={13} />
+                        </button>
                         <span className="ep-code">{epCode(e)}</span>
-                        <span className="ep-title">{e.title}<span className="muted small">{e.airDate}</span></span>
-                        {st ? <StatusPill status={st.status} /> : (
+                        <span className="ep-title">{e.title}<span className="muted small">{e.airDate}{st?.position && !st.watched ? ` · ${resumeLabel(st.position)} in` : ''}</span></span>
+                        {st?.status === 'done' ? (
+                          <span className="row-gap">
+                            <button className="btn small primary" onClick={() => store.play(key, e)}><Icon name="play" size={14} />Play</button>
+                            <button className="icon-btn" aria-label="Delete episode file" onClick={() => deleteEpisodeFile(e)}><Icon name="trash" size={16} /></button>
+                          </span>
+                        ) : st && st.status !== 'removed' && st.status !== 'not-found' ? <StatusPill status={st.status} /> : (
                           <button className="btn small ghost" onClick={() => { ensureAdded(); store.get(key, e); }}>
-                            <Icon name="download" size={14} />Get
+                            <Icon name="download" size={14} />{st?.status === 'removed' ? 'Again' : 'Get'}
                           </button>
                         )}
                       </li>

@@ -1,18 +1,22 @@
 import { useState } from 'react';
 import type { TitleInfo } from '../core/types';
+import { ConfirmProvider } from './components/Confirm';
 import { DetailModal } from './components/DetailModal';
+import { Player } from './components/Player';
 import { Icon, type IconName } from './components/Icon';
 import { Toasts } from './components/Toasts';
 import { StoreProvider, useStore } from './store';
+import { Calendar } from './views/Calendar';
 import { Discover } from './views/Discover';
 import { Downloads } from './views/Downloads';
 import { Library } from './views/Library';
 import { Settings } from './views/Settings';
 
-type View = 'discover' | 'library' | 'downloads' | 'settings';
+type View = 'discover' | 'library' | 'calendar' | 'downloads' | 'settings';
 const NAV: { id: View; label: string; icon: IconName }[] = [
   { id: 'discover', label: 'Discover', icon: 'discover' },
   { id: 'library', label: 'Library', icon: 'library' },
+  { id: 'calendar', label: 'Calendar', icon: 'calendar' },
   { id: 'downloads', label: 'Downloads', icon: 'download' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
@@ -38,7 +42,7 @@ function SafetyBadge() {
 }
 
 function Shell() {
-  const { downloads } = useStore();
+  const { downloads, nowPlaying, closePlayer, savePosition } = useStore();
   const [view, setView] = useState<View>('discover');
   const [detail, setDetail] = useState<TitleInfo | null>(null);
   const active = downloads.filter((d) => d.phase === 'downloading' || d.phase === 'checking').length;
@@ -62,10 +66,22 @@ function Shell() {
       <main className="content">
         {view === 'discover' && <Discover open={setDetail} goSettings={() => setView('settings')} />}
         {view === 'library' && <Library open={setDetail} goDiscover={() => setView('discover')} />}
+        {view === 'calendar' && <Calendar open={setDetail} goDiscover={() => setView('discover')} />}
         {view === 'downloads' && <Downloads />}
         {view === 'settings' && <Settings />}
       </main>
       {detail && <DetailModal key={`${detail.kind}${detail.tmdbId}${detail.iaId}`} info={detail} onClose={() => setDetail(null)} />}
+      {nowPlaying && (
+        <Player
+          key={nowPlaying.media.videoUrl}
+          title={nowPlaying.title}
+          subtitle={nowPlaying.subtitle}
+          media={nowPlaying.media}
+          resumeAt={nowPlaying.resumeAt}
+          onProgress={(s, d) => savePosition(nowPlaying.key, nowPlaying.ep, s, d)}
+          onClose={closePlayer}
+        />
+      )}
       <Toasts />
     </div>
   );
@@ -74,7 +90,9 @@ function Shell() {
 export function App() {
   return (
     <StoreProvider>
-      <Shell />
+      <ConfirmProvider>
+        <Shell />
+      </ConfirmProvider>
     </StoreProvider>
   );
 }

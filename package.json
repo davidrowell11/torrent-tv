@@ -12,16 +12,22 @@
     "desktop": "npm run build:desktop && electron .",
     "dist": "npm run build:desktop && electron-builder",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit"
+    "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",
+    "android": "npm run build && cap sync android && cap open android",
+    "android:apk": "npm run build && cap sync android && cd android && ./gradlew assembleDebug"
   },
   "license": "MIT",
   "dependencies": {
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/local-notifications": "^8.3.1",
     "@fontsource-variable/inter": "^5.3.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "webtorrent": "^3.0.21"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
