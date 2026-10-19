@@ -68,8 +68,11 @@ export class Tmdb {
     return hit ? this.details(kind, hit.id, signal) : undefined;
   }
 
+  /** Full record, including the US age rating and the IMDb id. */
   async details(kind: MediaKind, id: number, signal?: AbortSignal): Promise<TitleInfo> {
-    return toInfo(await this.get<TmdbResult>(`/${kind}/${id}`, {}, signal), kind);
+    const extra = kind === 'movie' ? 'release_dates,external_ids' : 'content_ratings,external_ids';
+    const r = await this.get<TmdbResult>(`/${kind}/${id}`, { append_to_response: extra }, signal);
+    return { ...toInfo(r, kind), certification: certificationOf(r), imdbId: r.imdb_id ?? r.external_ids?.imdb_id ?? undefined };
   }
 
   /** Episodes airing from today on (the rest of the current or next season). */
@@ -118,6 +121,18 @@ interface TmdbResult {
   backdrop_path?: string | null;
   vote_average?: number;
   genres?: { name: string }[];
+  imdb_id?: string | null;
+  external_ids?: { imdb_id?: string | null };
+  release_dates?: { results: { iso_3166_1: string; release_dates: { certification: string }[] }[] };
+  content_ratings?: { results: { iso_3166_1: string; rating: string }[] };
+}
+
+/** US age rating (G, PG, PG-13, R, NC-17, TV-Y … TV-MA), if TMDB has one. */
+export function certificationOf(r: Pick<TmdbResult, 'release_dates' | 'content_ratings'>): string | undefined {
+  const us = r.release_dates?.results.find((x) => x.iso_3166_1 === 'US');
+  const film = us?.release_dates.map((d) => d.certification.trim()).find(Boolean);
+  const tv = r.content_ratings?.results.find((x) => x.iso_3166_1 === 'US')?.rating.trim();
+  return film || tv || undefined;
 }
 
 function toInfo(r: TmdbResult, kind: MediaKind): TitleInfo {

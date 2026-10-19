@@ -7,6 +7,7 @@ const paths = {
   plus: 'M12 5v14M5 12h14',
   check: 'M5 12.5 10 17 19 7',
   close: 'M6 6l12 12M18 6 6 18',
+  back: 'M19 12H5m0 0 6-6m-6 6 6 6',
   play: 'M8 5v14l11-7z',
   pause: 'M7 5h4v14H7zM13 5h4v14h-4z',
   trash: 'M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13',

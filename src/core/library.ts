@@ -12,6 +12,8 @@ export interface AppState {
 
 export interface Settings {
   tmdbKey: string;
+  /** Optional OMDb key for IMDb and Rotten Tomatoes scores. */
+  omdbKey?: string;
   enabledSources: Record<string, boolean>;
   /** Desktop: pause all torrents when no VPN connection is detected. */
   requireVpn: boolean;

@@ -31,6 +31,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Installers carry the release version, so each one upgrades the previous install in place.
+      - run: npm version "${VERSION#v}" --no-git-tag-version --allow-same-version
+        shell: bash
       - run: npm test
       - run: npm run build:desktop
       - run: npx electron-builder --publish never
@@ -64,10 +67,26 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       - run: npm test
       - run: npm run build && npx cap sync android
+      # Sign every release with the same key so a new APK installs over the old one.
+      # The key lives in the repository secrets ANDROID_KEYSTORE (base64) and ANDROID_KEYSTORE_PASSWORD.
       - name: Build APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
-      - run: mkdir -p out && cp android/app/build/outputs/apk/debug/app-debug.apk out/Vidora-android.apk
+        env:
+          VIDORA_VERSION: ${{ env.VERSION }}
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE }}
+          VIDORA_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/vidora.jks"
+            export VIDORA_KEYSTORE="$RUNNER_TEMP/vidora.jks"
+            ./gradlew assembleRelease --no-daemon
+            cp app/build/outputs/apk/release/app-release.apk ../Vidora-android.apk
+          else
+            echo "::warning::ANDROID_KEYSTORE secret is not set; building a debug APK that cannot update an existing install."
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk ../Vidora-android.apk
+          fi
+      - run: mkdir -p out && mv Vidora-android.apk out/
       - uses: actions/upload-artifact@v4
         with:
           name: android

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { enrichTitle } from '../../core/metadata/enrich';
 import { epCode, keyOf } from '../../core/library';
 import type { EpisodeRef, TitleInfo, TorrentCandidate } from '../../core/types';
 import { useStore } from '../store';
@@ -12,6 +13,10 @@ const fmtSize = (b?: number) => (!b ? '' : b > 1e9 ? `${(b / 1e9).toFixed(1)} GB
 export function DetailModal({ info: initial, onClose }: { info: TitleInfo; onClose(): void }) {
   const store = useStore();
   const confirm = useConfirm();
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  // Closing goes through history so the back entry we pushed is used up.
+  const close = () => (history.state?.vidoraModal ? history.back() : onClose());
   const [info, setInfo] = useState(initial);
   const key = keyOf(info);
   const item = store.state.library.find((i) => keyOf(i.info) === key);
@@ -20,32 +25,32 @@ export function DetailModal({ info: initial, onClose }: { info: TitleInfo; onClo
   const [aired, setAired] = useState<EpisodeRef[] | null>(null);
   const [season, setSeason] = useState<number | null>(null);
 
-  // Fill in genres etc. from the full TMDB record.
+  // Fill in description, age rating, scores and artwork from every source we have.
   useEffect(() => {
-    if (!store.tmdb) return;
     const ac = new AbortController();
-    // Free classics come from Internet Archive by name: look up their artwork and info too.
-    if (!initial.tmdbId) {
-      store.tmdb.match(initial.kind, initial.title, initial.year, ac.signal)
-        .then((m) => m && setInfo({ ...m, tmdbId: 0, iaId: initial.iaId }))
-        .catch(() => {});
-      return () => ac.abort();
-    }
-    store.tmdb.details(initial.kind, initial.tmdbId, ac.signal).then(setInfo).catch(() => {});
-    if (initial.kind === 'tv') {
+    enrichTitle(initial, { tmdb: store.tmdb, omdb: store.omdb }, ac.signal).then(setInfo).catch(() => {});
+    if (store.tmdb && initial.tmdbId && initial.kind === 'tv') {
       store.tmdb.airedEpisodes(initial.tmdbId, new Date(), ac.signal).then((eps) => {
         setAired(eps);
         setSeason(eps.at(-1)?.season ?? 1);
       }).catch(() => setAired([]));
     }
     return () => ac.abort();
-  }, [store.tmdb, initial]);
+  }, [store.tmdb, store.omdb, initial]);
 
+  // Escape and the phone's back gesture close the details instead of leaving the app.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+    history.pushState({ vidoraModal: true }, '');
+    const onPop = () => onCloseRef.current();
+    window.addEventListener('popstate', onPop);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('popstate', onPop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const seasons = useMemo(() => [...new Set((aired ?? []).map((e) => e.season))], [aired]);
   const epStatus = (e: EpisodeRef) => item?.episodes?.find((x) => x.season === e.season && x.episode === e.episode);
@@ -88,15 +93,16 @@ export function DetailModal({ info: initial, onClose }: { info: TitleInfo; onClo
     );
     if (!choice) return;
     await store.remove(key, choice === 'delete');
-    onClose();
+    close();
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={close}>
       <article className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={info.title}>
         <div className="modal-hero" style={info.backdropUrl ? { backgroundImage: `url(${info.backdropUrl})` } : undefined}>
           <div className="modal-hero-shade" />
-          <button className="icon-btn modal-close" onClick={onClose} aria-label="Close"><Icon name="close" /></button>
+          <button className="icon-btn modal-close" onClick={close} aria-label="Close"><Icon name="close" /></button>
+          <button className="icon-btn modal-back" onClick={close} aria-label="Back"><Icon name="back" /></button>
         </div>
         <div className="modal-body">
           <div className="modal-poster">
@@ -107,7 +113,18 @@ export function DetailModal({ info: initial, onClose }: { info: TitleInfo; onClo
             <h1>{info.title}</h1>
             <div className="meta-row">
               {info.year && <span>{info.year}</span>}
-              {info.rating ? <span className="meta-rating"><Icon name="star" size={14} />{info.rating.toFixed(1)}</span> : null}
+              {info.certification && <span className="cert" title="Age rating">{info.certification}</span>}
+              {info.imdbRating ? (
+                <a className="score imdb" title="IMDb rating" href={info.imdbId ? `https://www.imdb.com/title/${info.imdbId}/` : undefined} target="_blank" rel="noreferrer">
+                  <b>IMDb</b>{info.imdbRating.toFixed(1)}
+                </a>
+              ) : null}
+              {info.rottenTomatoes !== undefined && (
+                <span className={`score rt ${info.rottenTomatoes >= 60 ? 'fresh' : 'rotten'}`} title="Rotten Tomatoes critics score">
+                  <b>{info.rottenTomatoes >= 60 ? '🍅' : '🤢'}</b>{info.rottenTomatoes}%
+                </span>
+              )}
+              {info.rating && !info.imdbRating ? <span className="meta-rating" title="TMDB rating"><Icon name="star" size={14} />{info.rating.toFixed(1)}</span> : null}
               {info.genres?.slice(0, 3).map((g) => <span key={g} className="chip">{g}</span>)}
               {item && info.kind === 'movie' && <StatusPill status={item.status} />}
             </div>

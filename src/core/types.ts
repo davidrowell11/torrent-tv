@@ -14,6 +14,13 @@ export interface TitleInfo {
   backdropUrl?: string;
   rating?: number;
   genres?: string[];
+  /** Age rating, e.g. PG-13 or TV-MA (US). */
+  certification?: string;
+  imdbId?: string;
+  /** IMDb user score out of 10. */
+  imdbRating?: number;
+  /** Rotten Tomatoes critics score, in percent. */
+  rottenTomatoes?: number;
 }
 
 /** Artwork and info saved next to a finished download (poster, background, .nfo for media players). */
