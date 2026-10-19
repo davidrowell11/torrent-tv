@@ -1,5 +1,14 @@
 apply plugin: 'com.android.application'
 
+// Release builds pass VIDORA_VERSION (e.g. 0.3.0). Android only installs an update over the
+// existing app when versionCode goes up and the APK is signed with the same key every time.
+def vidoraVersion = (System.getenv('VIDORA_VERSION') ?: '0.0.1').replaceFirst(/^v/, '')
+def vidoraVersionCode = { String v ->
+    def p = (v.tokenize('.-') + ['0', '0', '0']).take(3).collect { it.isInteger() ? it.toInteger() : 0 }
+    p[0] * 10000 + p[1] * 100 + p[2]
+}(vidoraVersion)
+def keystorePath = System.getenv('VIDORA_KEYSTORE')
+
 android {
     namespace = "app.vidora.mobile"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +16,8 @@ android {
         applicationId "app.vidora.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode vidoraVersionCode
+        versionName vidoraVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +25,19 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (keystorePath) {
+            vidora {
+                storeFile file(keystorePath)
+                storePassword System.getenv('VIDORA_KEYSTORE_PASSWORD')
+                keyAlias 'vidora'
+                keyPassword System.getenv('VIDORA_KEYSTORE_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (keystorePath) signingConfig signingConfigs.vidora
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

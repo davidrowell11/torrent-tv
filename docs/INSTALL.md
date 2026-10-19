@@ -18,6 +18,7 @@ Vidora works two ways on every device:
 **Downloads:** https://github.com/davidrowell11/vidora/releases/latest
 
 After installing, open **Settings** and paste a free TMDB key (https://www.themoviedb.org/settings/api) to turn on search, artwork and episode tracking.
+For IMDb and Rotten Tomatoes scores, also paste a free OMDb key (https://www.omdbapi.com/apikey.aspx).
 
 ---
 
@@ -77,6 +78,16 @@ Downloads made in the browser are kept inside the browser's storage for this sit
 Download the **.deb** (Ubuntu, Debian, Mint) and open it, or the **.AppImage** (any distro): `chmod +x Vidora-*.AppImage && ./Vidora-*.AppImage`. Install ClamAV for virus scanning: `sudo apt install clamav`.
 
 ---
+
+## Updating to a new version
+Every version replaces the one you have. You never end up with two copies, and your library, settings and downloads stay.
+- **Android app (APK):** download the new **Vidora-android.apk** from the releases page and install it. Android shows **Update** instead of Install. (If you installed version 0.2.0, uninstall it once first: it was signed differently, so Android can't update it.)
+- **Web app / home-screen app:** nothing to do. It updates itself the next time you open it.
+- **Windows:** run the new **Vidora Setup** file. It replaces the old version.
+- **Mac:** drag the new Vidora into Applications and choose **Replace**.
+- **Linux / Chromebook:** open the new **.deb** and choose **Upgrade**, or replace the old **.AppImage** file with the new one.
+
+Tip: on a phone, use either the Android app or the home-screen web app, not both. They're separate apps, so having both shows two Vidora icons.
 
 ## Removing downloads
 - **One film or episode:** open the title and tap **Delete download** (films) or the bin icon next to an episode. It stays in your library so you can download it again.

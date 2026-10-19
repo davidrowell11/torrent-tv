@@ -3,6 +3,7 @@ import { notificationsSupported, requestNotifications } from '../../core/notify'
 import { Trakt, type DeviceCode } from '../../core/sync/trakt';
 import { fmtBytes } from './Downloads';
 import { Tmdb } from '../../core/metadata/tmdb';
+import { Omdb } from '../../core/metadata/omdb';
 import { builtInSources } from '../../core/sources/registry';
 import { validateTorznabUrl } from '../../core/sources/torznab';
 import { Icon } from '../components/Icon';
@@ -21,6 +22,8 @@ export function Settings() {
   const s = state.settings;
   const [key, setKey] = useState(s.tmdbKey);
   const [testing, setTesting] = useState(false);
+  const [omdbKey, setOmdbKey] = useState(s.omdbKey ?? '');
+  const [testingOmdb, setTestingOmdb] = useState(false);
   const [feed, setFeed] = useState({ name: '', url: '', apiKey: '', minSeeders: 10 });
   const [ack, setAck] = useState(false);
   const feedError = feed.url ? validateTorznabUrl(feed.url) : undefined;
@@ -57,6 +60,19 @@ export function Settings() {
   }, []);
   const standalone = typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches;
 
+  async function saveOmdbKey() {
+    setTestingOmdb(true);
+    try {
+      await new Omdb(omdbKey.trim()).byImdbId('tt0111161');
+      updateSettings({ omdbKey: omdbKey.trim() });
+      toast('OMDb connected. IMDb and Rotten Tomatoes scores are on.', 'good');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'That key did not work', 'warn');
+    } finally {
+      setTestingOmdb(false);
+    }
+  }
+
   async function saveKey() {
     setTesting(true);
     try {
@@ -91,6 +107,12 @@ export function Settings() {
           <button className="btn primary" onClick={saveKey} disabled={!key.trim() || testing}>{testing ? 'Checking…' : s.tmdbKey ? 'Update' : 'Connect'}</button>
         </div>
         {s.tmdbKey && <p className="ok-text small"><Icon name="check" size={14} />Connected</p>}
+        <p className="muted" style={{ marginTop: 20 }}>For IMDb and Rotten Tomatoes scores, add a free OMDb key from <a href="https://www.omdbapi.com/apikey.aspx" target="_blank" rel="noreferrer">omdbapi.com</a> (choose the free plan; the key arrives by email).</p>
+        <div className="field-row">
+          <input type="password" value={omdbKey} onChange={(e) => setOmdbKey(e.target.value)} placeholder="OMDb API key" autoComplete="off" spellCheck={false} />
+          <button className="btn primary" onClick={saveOmdbKey} disabled={!omdbKey.trim() || testingOmdb}>{testingOmdb ? 'Checking…' : s.omdbKey ? 'Update' : 'Connect'}</button>
+        </div>
+        {s.omdbKey && <p className="ok-text small"><Icon name="check" size={14} />Connected</p>}
       </section>
 
       <section className="card">

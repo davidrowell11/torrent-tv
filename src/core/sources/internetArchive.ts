@@ -93,3 +93,24 @@ export async function browseFreeClassics(
 }
 
 export const iaTorrentUrl = (iaId: string) => `https://archive.org/download/${iaId}/${iaId}_archive.torrent`;
+
+/** The item's own description, as plain text (Internet Archive stores it as HTML). */
+export async function fetchIaDescription(iaId: string, fetcher: Fetcher = (u, i) => fetch(u, i), signal?: AbortSignal): Promise<string | undefined> {
+  if (!/^[A-Za-z0-9._-]+$/.test(iaId)) return undefined;
+  const res = await fetcher(`https://archive.org/metadata/${iaId}/metadata/description`, { signal });
+  if (!res.ok) return undefined;
+  const body = (await res.json()) as { result?: string | string[] };
+  const raw = Array.isArray(body.result) ? body.result.join('\n') : body.result;
+  return raw ? htmlToText(raw) || undefined : undefined;
+}
+
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>|<\/p>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n+/g, '\n\n')
+    .trim()
+    .slice(0, 1200);
+}

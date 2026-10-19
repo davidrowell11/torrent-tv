@@ -10,6 +10,8 @@ import {
   type AppState, type Settings,
 } from '../core/library';
 import { Tmdb } from '../core/metadata/tmdb';
+import { Omdb } from '../core/metadata/omdb';
+import { enrichTitle } from '../core/metadata/enrich';
 import { iaTorrentUrl } from '../core/sources/internetArchive';
 import { allSources, findTorrents } from '../core/sources/registry';
 import type { DownloadMeta, EpisodeRef, LibraryEpisode, LibraryItem, SearchQuery, TitleInfo, TorrentCandidate } from '../core/types';
@@ -27,6 +29,7 @@ interface Store {
   scanner: string | null;
   engineKind: 'browser' | 'desktop';
   tmdb?: Tmdb;
+  omdb?: Omdb;
   toasts: Toast[];
   toast(text: string, tone?: Toast['tone']): void;
   add(info: TitleInfo): void;
@@ -99,6 +102,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const tmdb = useMemo(() => (state.settings.tmdbKey ? new Tmdb(state.settings.tmdbKey) : undefined), [state.settings.tmdbKey]);
+  const omdb = useMemo(() => (state.settings.omdbKey ? new Omdb(state.settings.omdbKey) : undefined), [state.settings.omdbKey]);
   const sources = useMemo(
     () => allSources(state.settings.customSources, feedFetcher(engine)),
     [state.settings.customSources, engine],
@@ -242,18 +246,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [checkNow, get]);
   /** Make sure every title in the library has full artwork and info, not just what a search result carried. */
   const enrich = async (info: TitleInfo) => {
-    if (!tmdb) return;
+    if (!tmdb && !omdb && !info.iaId) return;
     try {
-      const full = info.tmdbId ? await tmdb.details(info.kind, info.tmdbId) : await tmdb.match(info.kind, info.title, info.year);
-      if (!full) return;
+      const merged = await enrichTitle(info, { tmdb, omdb });
       const key = keyOf(info);
-      const merged: TitleInfo = {
-        ...info, ...full,
-        // Keep the identity the library already uses for this title.
-        tmdbId: info.tmdbId, iaId: info.iaId,
-        posterUrl: full.posterUrl ?? info.posterUrl,
-        overview: full.overview || info.overview,
-      };
       ref.current = { ...ref.current, library: updateTitle(ref.current.library, key, (i) => ({ ...i, info: merged })) };
       patchItem(key, (i) => ({ ...i, info: merged }));
     } catch {
@@ -261,12 +257,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Fill in artwork/info for anything added before a TMDB key was set.
+  // Fill in artwork, info and scores for anything added before a key was set.
   useEffect(() => {
-    if (!tmdb) return;
-    ref.current.library.filter((i) => !i.info.backdropUrl || !i.info.genres).forEach((i) => enrich(i.info));
+    ref.current.library
+      .filter((i) => !i.info.overview || (tmdb && (!i.info.backdropUrl || !i.info.genres || !i.info.certification)) || (omdb && !i.info.imdbRating))
+      .forEach((i) => enrich(i.info));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tmdb]);
+  }, [tmdb, omdb]);
 
   const trakt = useMemo(() => {
     const a = state.settings.trakt;
@@ -357,6 +354,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     engine,
     engineKind: engine.kind,
     tmdb,
+    omdb,
     toasts,
     toast,
     add: (info) => {
