@@ -16,7 +16,8 @@ Use it in any browser (and install it to your phone's home screen), or download 
 
 ## Features
 
-- **Discover**: trending titles, instant search, and a shelf of free public-domain classics you can download right away.
+- **Discover**: trending, new films, new TV shows, airing this week, instant search, and free public-domain classics you can download right away.
+- **Browse & filter**: every film or show, filtered by genre, year, rating and language, sorted by popular, newest or top rated.
 - **Follow shows**: new episodes download on their own (checked every few hours). Or grab a whole series from episode one.
 - **You choose what downloads**: nothing is fetched unless you press Download or Get, or follow a show. Unfollow and its episodes stop. Films can be saved to your library without downloading.
 - **Artwork and info**: posters, backdrops, ratings, genres and episode lists from [TMDB](https://www.themoviedb.org/), filled in for every title in your library (free classics are matched to TMDB too).

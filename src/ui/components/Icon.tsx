@@ -24,6 +24,7 @@ const paths = {
   external: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',
   key: 'M14 10a4 4 0 1 1-1.2-2.8L21 15v3h-3v-2h-2v-2h-2',
   calendar: 'M4 6h16v14H4zM4 10h16M8 3v5M16 3v5',
+  filter: 'M4 5h16l-6 8v5l-4 2v-7z',
   phone: 'M7 3h10v18H7zM11 18h2',
   eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
   sync: 'M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4',

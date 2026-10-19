@@ -1,4 +1,5 @@
 import type { EpisodeRef, MediaKind, TitleInfo } from '../types';
+import { discoverParams, newReleaseParams, type DiscoverFilters } from './discover';
 import type { Fetcher } from '../sources/types';
 
 const API = 'https://api.themoviedb.org/3';
@@ -27,6 +28,28 @@ export class Tmdb {
   async search(text: string, signal?: AbortSignal): Promise<TitleInfo[]> {
     const body = await this.get<{ results: TmdbResult[] }>('/search/multi', { query: text, include_adult: 'false' }, signal);
     return body.results.filter((r) => r.media_type === 'movie' || r.media_type === 'tv').map((r) => toInfo(r, r.media_type as MediaKind));
+  }
+
+  async genres(kind: MediaKind, signal?: AbortSignal): Promise<{ id: number; name: string }[]> {
+    return (await this.get<{ genres: { id: number; name: string }[] }>(`/genre/${kind}/list`, {}, signal)).genres;
+  }
+
+  /** Browse with filters. Returns one page plus whether more pages exist. */
+  async discover(f: DiscoverFilters, page = 1, signal?: AbortSignal): Promise<{ results: TitleInfo[]; more: boolean }> {
+    const body = await this.get<{ results: TmdbResult[]; page: number; total_pages: number }>(`/discover/${f.kind}`, discoverParams(f, page), signal);
+    return { results: body.results.map((r) => toInfo(r, f.kind)), more: body.page < Math.min(body.total_pages, 500) };
+  }
+
+  /** Films released, or shows that premiered, in the last couple of months. */
+  async newReleases(kind: MediaKind, signal?: AbortSignal): Promise<TitleInfo[]> {
+    const body = await this.get<{ results: TmdbResult[] }>(`/discover/${kind}`, newReleaseParams(kind), signal);
+    return body.results.map((r) => toInfo(r, kind));
+  }
+
+  /** Shows with an episode airing in the next week. */
+  async airingThisWeek(signal?: AbortSignal): Promise<TitleInfo[]> {
+    const body = await this.get<{ results: TmdbResult[] }>('/tv/on_the_air', {}, signal);
+    return body.results.map((r) => toInfo(r, 'tv'));
   }
 
   async trending(kind: MediaKind | 'all' = 'all', signal?: AbortSignal): Promise<TitleInfo[]> {

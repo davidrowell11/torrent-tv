@@ -296,6 +296,21 @@ video::cue { background: rgba(0, 0, 0, 0.6); font-family: 'Inter Variable', syst
 .trakt-code .code { font-size: 34px; font-weight: 800; letter-spacing: 0.2em; margin: 12px 0; font-variant-numeric: tabular-nums; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 code { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--panel-2); }
 
+/* ---------- Discover tabs & browse filters ---------- */
+.discover-tabs { margin: 26px 40px 0; }
+.discover-tabs button, .filters .segmented button { display: inline-flex; align-items: center; gap: 6px; }
+.browse { padding: 22px 40px 40px; }
+.filters { display: flex; flex-direction: column; gap: 14px; margin-bottom: 26px; position: sticky; top: 0; z-index: 5; padding: 12px 0; background: linear-gradient(180deg, var(--bg) 85%, transparent); }
+.filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.filter-row.selects select { flex: none; min-width: 140px; padding: 10px 12px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip-btn { flex: none; padding: 8px 14px; border-radius: 99px; font-size: 14px; font-weight: 500; background: var(--panel); border: 1px solid var(--line); color: var(--muted); transition: all 0.15s; white-space: nowrap; }
+.chip-btn:hover { color: var(--text); background: var(--panel-2); }
+.chip-btn.on { background: var(--text); color: var(--bg); border-color: transparent; font-weight: 600; }
+.load-more { display: flex; justify-content: center; margin-top: 30px; }
+.browse-empty { padding: 20px 0; }
+
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -330,6 +345,14 @@ code { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--
   .dl-actions { width: 100%; justify-content: flex-end; }
   .form-grid { grid-template-columns: 1fr; }
   .continue-row { grid-auto-columns: 240px; }
+  .discover-tabs { margin: 20px 16px 0; display: flex; }
+  .discover-tabs button { flex: 1; justify-content: center; }
+  .browse { padding: 16px; }
+  .filter-row.selects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .filter-row.selects select { min-width: 0; width: 100%; font-size: 14px; padding: 10px 8px; }
+  .filter-row.selects .btn { grid-column: 1 / -1; justify-self: start; }
+  .filters .segmented { flex: 1; }
+  .filters .segmented button { flex: 1; justify-content: center; padding: 7px 8px; }
   .nav-item { padding: 8px 6px; }
   .nav-item span { font-size: 10px; }
   .player-screen:not(:hover) .player-top { opacity: 1; }
