@@ -63,6 +63,10 @@ function Shell() {
         ))}
         <div className="sidebar-foot"><SafetyBadge /></div>
       </nav>
+      <header className="topbar">
+        <img className="logo" src="./icon.svg" alt="" />
+        <span className="brand-name">Vid<b>ora</b></span>
+      </header>
       <main className="content">
         {view === 'discover' && <Discover open={setDetail} goSettings={() => setView('settings')} />}
         {view === 'library' && <Library open={setDetail} goDiscover={() => setView('discover')} />}
