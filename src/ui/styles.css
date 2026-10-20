@@ -45,7 +45,8 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.02em; }
   border-right: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 600; padding: 4px 10px 22px; }
-.brand b { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 800; }
+.topbar { display: none; }
+.brand b, .brand-name b { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 800; }
 .logo { display: block; width: 34px; height: 34px; box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35); border-radius: 8px; }
 .nav-item {
   display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px;
@@ -328,7 +329,10 @@ code { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--
 
 /* ---------- Small screens: bottom tab bar ---------- */
 @media (max-width: 760px) {
-  .app { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+  .topbar { display: flex; align-items: center; gap: 9px; order: 0; padding: calc(var(--sat) + 10px) 16px 10px; font-size: 18px; font-weight: 600; background: rgba(11, 13, 18, 0.96); border-bottom: 1px solid var(--line); }
+  .topbar .logo { width: 28px; height: 28px; }
+  .content { order: 1; }
   .sidebar { order: 2; flex-direction: row; justify-content: space-around; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--line); background: rgba(11, 13, 18, 0.96); }
   .brand, .sidebar-foot { display: none; }
   .nav-item { flex-direction: column; gap: 3px; font-size: 11px; padding: 8px 10px; }
@@ -348,7 +352,6 @@ code { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--
   .modal-hero { height: calc(220px + var(--sat)); }
   .modal-close { display: none; }
   .modal-back { display: grid; }
-  .page { padding-top: calc(24px + var(--sat)); }
   .modal-body { grid-template-columns: 1fr; padding: 0 16px 28px; margin-top: -110px; gap: 16px; }
   .modal-poster { width: 130px; }
   .modal-info { padding-top: 0; }
