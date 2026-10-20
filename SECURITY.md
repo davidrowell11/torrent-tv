@@ -13,6 +13,12 @@ Vidora assumes every torrent is hostile until proven otherwise. Each download pa
 | No seeding | Torrents are stopped as soon as they finish. | `electron/main.ts` |
 | Hardened desktop shell | `contextIsolation`, `sandbox`, no Node in the page, a narrow validated IPC bridge, strict Content-Security-Policy, navigation and new windows blocked, all permission requests denied, external links only to an allowlist. | `electron/main.ts`, `electron/preload.cjs`, `index.html` |
 
+## Updates and keys
+
+- **Signed Android updates:** every Android release is signed with the same private key, held only in the repository's GitHub secrets. Android installs an update only when the signature matches, so nobody else can publish an APK that replaces Vidora.
+- **Your API keys** (TMDB, OMDb, Trakt) are stored only on your device and sent only to their own service over HTTPS.
+- **Services Vidora contacts:** TMDB and OMDb for info, artwork and ratings; Internet Archive for free films; Trakt if you connect it; and any Torznab feed you add yourself.
+
 ## Browser mode limits
 
 Browsers cannot run a virus scanner or see your VPN. In the browser, files are still allowlisted and content-checked before you can play or save them, and only WebRTC peers and HTTPS web seeds are used (no raw BitTorrent connections). Use the desktop app for full protection.
