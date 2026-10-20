@@ -104,7 +104,8 @@ Tip: on a phone, use either the Android app or the home-screen web app, not both
 Do these on github.com. Nothing here needs a developer.
 1. **Turn on the web app (once):** **Settings → Pages**, set **Source** to **GitHub Actions**. Then **Actions → Web app → Run workflow**. A minute or two later the app is live at https://davidrowell11.github.io/vidora/, and every later change to `main` updates it.
 2. **Android signing (once, already done):** the repository secrets `ANDROID_KEYSTORE` and `ANDROID_KEYSTORE_PASSWORD` sign every Android download with the same key, which is what lets a new APK install over the old one. Never change or delete them: if they are lost, phones must uninstall Vidora once to take the next version.
-3. **Make a new version:** **Actions → Release apps → Run workflow**, enter a version number higher than the last one (for example `0.4.0` after `0.3.0`), and press **Run workflow**. When it finishes, the Windows, Mac, Linux and Android files appear on the [releases page](https://github.com/davidrowell11/vidora/releases/latest).
+3. **Built-in keys (optional):** add the repository secrets `TMDB_API_KEY` and `OMDB_API_KEY` to build them into every version, so artwork, ratings and recommendations work without typing keys into Settings. Anyone with the app can read a built-in key; they are free, rate-limited keys, so the worst case is someone using up the daily limit. A key entered in Settings always takes priority.
+4. **Make a new version:** **Actions → Release apps → Run workflow**, enter a version number higher than the last one (for example `0.4.0` after `0.3.0`), and press **Run workflow**. When it finishes, the Windows, Mac, Linux and Android files appear on the [releases page](https://github.com/davidrowell11/vidora/releases/latest).
 
 ## Running it from source (developers)
 Needs [Node.js 22 or newer](https://nodejs.org/) and Git.

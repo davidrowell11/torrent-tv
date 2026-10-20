@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { keyOf } from '../../core/library';
+import { mergeRecommendations, recommendationSeeds } from '../../core/metadata/recommend';
 import { browseFreeClassics, type FreeTitle } from '../../core/sources/internetArchive';
 import type { TitleInfo } from '../../core/types';
 import { Icon } from '../components/Icon';
@@ -23,6 +24,7 @@ export function Discover({ open, goSettings }: { open(info: TitleInfo): void; go
   const [newFilms, setNewFilms] = useState<TitleInfo[] | null>(null);
   const [newShows, setNewShows] = useState<TitleInfo[] | null>(null);
   const [airing, setAiring] = useState<TitleInfo[] | null>(null);
+  const [forYou, setForYou] = useState<TitleInfo[] | null>(null);
   const [tab, setTab] = useState<'highlights' | 'browse'>(() => {
     try { return (localStorage.getItem('torrent-tv/discover-tab') as 'browse') ?? 'highlights'; } catch { return 'highlights'; }
   });
@@ -41,6 +43,24 @@ export function Discover({ open, goSettings }: { open(info: TitleInfo): void; go
     browseFreeClassics('classic_tv', 24, undefined, ac.signal).then(setClassicTv).catch(() => setClassicTv([]));
     return () => ac.abort();
   }, [store.tmdb]);
+
+  // "Recommended for you": what TMDB suggests for the titles you most recently added or watched.
+  const seeds = recommendationSeeds(store.state.library);
+  const seedKey = seeds.map(keyOf).join(',');
+  useEffect(() => {
+    if (!store.tmdb || !seeds.length) {
+      setForYou([]);
+      return;
+    }
+    const ac = new AbortController();
+    const owned = new Set(store.state.library.map((i) => keyOf(i.info)));
+    Promise.all(seeds.map((t) => store.tmdb!.recommendations(t.kind, t.tmdbId, ac.signal).catch(() => [])))
+      .then((lists) => !ac.signal.aborted && setForYou(mergeRecommendations(lists, owned)))
+      .catch(() => {});
+    return () => ac.abort();
+    // Re-run only when the seed titles change, not on every library update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.tmdb, seedKey]);
 
   // Debounced search as you type.
   useEffect(() => {
@@ -129,6 +149,13 @@ export function Discover({ open, goSettings }: { open(info: TitleInfo): void; go
             <>
               {store.tmdb && (
                 <>
+                  {forYou === null ? (
+                    <Shelf title="Recommended for you" subtitle="Based on what's in your library"><SkeletonRow /></Shelf>
+                  ) : forYou.length > 0 && (
+                    <Shelf title="Recommended for you" subtitle="Based on what's in your library">
+                      {forYou.map((t) => <Poster key={keyOf(t)} info={t} status={inLib(t)} onOpen={() => open(t)} />)}
+                    </Shelf>
+                  )}
                   <Shelf title="Trending" subtitle="What everyone is watching this week">
                     {trending ? trending.map((t) => <Poster key={keyOf(t)} info={t} status={inLib(t)} onOpen={() => open(t)} />) : <SkeletonRow />}
                   </Shelf>

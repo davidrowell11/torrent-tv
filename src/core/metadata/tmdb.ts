@@ -59,6 +59,14 @@ export class Tmdb {
       .map((r) => toInfo(r, (r.media_type ?? kind) as MediaKind));
   }
 
+  /** Titles TMDB recommends to people who liked this one. */
+  async recommendations(kind: MediaKind, id: number, signal?: AbortSignal): Promise<TitleInfo[]> {
+    const body = await this.get<{ results: TmdbResult[] }>(`/${kind}/${id}/recommendations`, {}, signal);
+    return body.results
+      .filter((r) => (r.media_type ?? kind) === 'movie' || (r.media_type ?? kind) === 'tv')
+      .map((r) => toInfo(r, (r.media_type ?? kind) as MediaKind));
+  }
+
   /** Best TMDB match for a title we only know by name (e.g. an Internet Archive film). */
   async match(kind: MediaKind, title: string, year?: number, signal?: AbortSignal): Promise<TitleInfo | undefined> {
     const params: Record<string, string> = { query: title.replace(/\(\d{4}\)|\[.*?\]/g, '').trim(), include_adult: 'false' };
