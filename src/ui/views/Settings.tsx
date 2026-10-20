@@ -4,6 +4,7 @@ import { Trakt, type DeviceCode } from '../../core/sync/trakt';
 import { fmtBytes } from './Downloads';
 import { Tmdb } from '../../core/metadata/tmdb';
 import { Omdb } from '../../core/metadata/omdb';
+import { BUILT_IN_KEYS } from '../../core/builtinKeys';
 import { builtInSources } from '../../core/sources/registry';
 import { validateTorznabUrl } from '../../core/sources/torznab';
 import { Icon } from '../components/Icon';
@@ -106,13 +107,15 @@ export function Settings() {
           <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="TMDB API key or read access token" autoComplete="off" spellCheck={false} />
           <button className="btn primary" onClick={saveKey} disabled={!key.trim() || testing}>{testing ? 'Checking…' : s.tmdbKey ? 'Update' : 'Connect'}</button>
         </div>
-        {s.tmdbKey && <p className="ok-text small"><Icon name="check" size={14} />Connected</p>}
+        {s.tmdbKey ? <p className="ok-text small"><Icon name="check" size={14} />Connected</p>
+          : BUILT_IN_KEYS.tmdb && <p className="ok-text small"><Icon name="check" size={14} />Using the built-in key. Paste your own to replace it.</p>}
         <p className="muted" style={{ marginTop: 20 }}>For IMDb and Rotten Tomatoes scores, add a free OMDb key from <a href="https://www.omdbapi.com/apikey.aspx" target="_blank" rel="noreferrer">omdbapi.com</a> (choose the free plan; the key arrives by email).</p>
         <div className="field-row">
           <input type="password" value={omdbKey} onChange={(e) => setOmdbKey(e.target.value)} placeholder="OMDb API key" autoComplete="off" spellCheck={false} />
           <button className="btn primary" onClick={saveOmdbKey} disabled={!omdbKey.trim() || testingOmdb}>{testingOmdb ? 'Checking…' : s.omdbKey ? 'Update' : 'Connect'}</button>
         </div>
-        {s.omdbKey && <p className="ok-text small"><Icon name="check" size={14} />Connected</p>}
+        {s.omdbKey ? <p className="ok-text small"><Icon name="check" size={14} />Connected</p>
+          : BUILT_IN_KEYS.omdb && <p className="ok-text small"><Icon name="check" size={14} />Using the built-in key. Paste your own to replace it.</p>}
       </section>
 
       <section className="card">

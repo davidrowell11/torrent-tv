@@ -34,7 +34,7 @@ Then open **Settings** in Vidora and paste a free [TMDB key](https://www.themovi
 
 ## Features
 
-- **Discover**: trending, new films, new TV shows, airing this week, instant search, and free public-domain classics you can download right away.
+- **Discover**: recommendations based on your library, trending, new films, new TV shows, airing this week, instant search, and free public-domain classics you can download right away.
 - **Browse & filter**: every film or show, filtered by genre, year, rating and language, sorted by popular, newest or top rated.
 - **Follow shows**: new episodes download on their own (checked every few hours). Or grab a whole series from episode one.
 - **You choose what downloads**: nothing is fetched unless you press Download or Get, or follow a show. Unfollow and its episodes stop. Films can be saved to your library without downloading.

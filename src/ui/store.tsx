@@ -12,6 +12,7 @@ import {
 import { Tmdb } from '../core/metadata/tmdb';
 import { Omdb } from '../core/metadata/omdb';
 import { enrichTitle } from '../core/metadata/enrich';
+import { BUILT_IN_KEYS } from '../core/builtinKeys';
 import { iaTorrentUrl } from '../core/sources/internetArchive';
 import { allSources, findTorrents } from '../core/sources/registry';
 import type { DownloadMeta, EpisodeRef, LibraryEpisode, LibraryItem, SearchQuery, TitleInfo, TorrentCandidate } from '../core/types';
@@ -101,8 +102,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4500);
   }, []);
 
-  const tmdb = useMemo(() => (state.settings.tmdbKey ? new Tmdb(state.settings.tmdbKey) : undefined), [state.settings.tmdbKey]);
-  const omdb = useMemo(() => (state.settings.omdbKey ? new Omdb(state.settings.omdbKey) : undefined), [state.settings.omdbKey]);
+  const tmdbKey = state.settings.tmdbKey || BUILT_IN_KEYS.tmdb;
+  const omdbKey = state.settings.omdbKey || BUILT_IN_KEYS.omdb;
+  const tmdb = useMemo(() => (tmdbKey ? new Tmdb(tmdbKey) : undefined), [tmdbKey]);
+  const omdb = useMemo(() => (omdbKey ? new Omdb(omdbKey) : undefined), [omdbKey]);
   const sources = useMemo(
     () => allSources(state.settings.customSources, feedFetcher(engine)),
     [state.settings.customSources, engine],
